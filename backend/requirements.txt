@@ -1,0 +1,11 @@
+Flask
+Flask-SocketIO
+Flask-Cors
+Flask-RESTful
+SQLAlchemy
+python-dotenv
+requests
+pydub
+opencv-python
+SpeechRecognition
+pyaudio
