@@ -6,7 +6,7 @@ import ChatWindow from '../components/ChatWindow';
 
 const ChatApp: React.FC = () => {
   const { id } = useParams();
-  const channelId = id || 'public';  // 如果没有 id 参数，默认使用公共频道
+  const channelId = id || 'public';
 
   return (
     <Box sx={{ height: 'calc(100vh - 64px)' }}>
