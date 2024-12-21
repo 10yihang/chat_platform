@@ -1,31 +1,29 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
+from config import Config
+from extensions import db
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.media import media_bp
+from flask_sqlalchemy import SQLAlchemy
+from config import Config
 
-# 初始化应用
-app = Flask(__name__)
-CORS(app)
-
-# 配置应用程序
-app.config['SECRET_KEY'] = 'your-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# 初始化数据库
-db = SQLAlchemy(app)
-
-# 注册蓝图
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
-app.register_blueprint(chat_bp, url_prefix='/api/chat')
-app.register_blueprint(media_bp, url_prefix='/api/media')
-
-def init_db():
-    with app.app_context():
-        db.create_all()
+def create_app():
+    app = Flask(__name__)
+    CORS(app)
+    app.config.from_object(Config)
+    
+    db.init_app(app)
+    
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(media_bp, url_prefix='/api/media')
+    
+    return app
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=5000)
+    app = create_app()
+    with app.app_context():
+        db.create_all()
+    print('数据库初始化完成')
+    app.run(debug=True, port=5000, host='0.0.0.0')
