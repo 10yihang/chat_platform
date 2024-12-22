@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from models.message import Message
+import jwt
+from jwt import encode
 from models.user import User
+from config import Config
 
 class ChatService:
     @staticmethod
@@ -24,6 +27,10 @@ class ChatService:
             ((Message.sender_id == user1_id) & (Message.receiver_id == user2_id)) |
             ((Message.sender_id == user2_id) & (Message.receiver_id == user1_id))
         ).order_by(Message.created_at.desc()).limit(limit).all()
+    
+    @staticmethod
+    def generate_token(user_id):
+        return jwt.encode({'user_id': user_id}, Config.SECRET_KEY, algorithm='HS256')
 
 chat_bp = Blueprint('chat', __name__)
 

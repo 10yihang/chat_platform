@@ -18,15 +18,16 @@ const StyledMain = styled('div')({
 
 interface LayoutProps {
   children: React.ReactNode;
+  onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({ children, onLogout = () => {} }) => {
   return (
     <StyledRoot>
       <AppBar position="fixed">
         <Toolbar>
           <Typography variant="h6">聊天室</Typography>
-          <Navigation />
+          <Navigation onLogout={onLogout} />
         </Toolbar>
       </AppBar>
       <StyledMain>
