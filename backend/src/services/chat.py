@@ -7,14 +7,36 @@ from config import Config
 
 class ChatService:
     @staticmethod
-    def send_message(sender_id, receiver_id, content, msg_type='text'):
+    def send_text_message(sender_id, receiver_id = 0, group_id = 0, content = '', status = 'sent'):
         message = Message(
             sender_id=sender_id,
             receiver_id=receiver_id,
-            content=content,
-            msg_type=msg_type
+            group_id=group_id,
+            content=content
         )
-        message.save()
+        return message
+    
+    @staticmethod
+    def send_emoji_message(sender_id, receiver_id = 0, group_id = 0, content = '', status = 'sent'):
+        message = Message(
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            group_id=group_id,
+            content=content,
+            type='emoji'
+        )
+        return message
+    
+    @staticmethod
+    def send_file_message(sender_id, receiver_id = 0, group_id = 0, content = '', file_url = '', status = 'sent'):
+        message = Message(
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            group_id=group_id,
+            content=content,
+            type='file',
+            file_url=file_url
+        )
         return message
 
     @staticmethod

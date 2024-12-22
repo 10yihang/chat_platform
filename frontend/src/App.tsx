@@ -18,7 +18,7 @@ declare global {
   var preUrl: string;
 }
 
-global.preUrl = 'http://127.0.0.1:5000';
+global.preUrl = 'http://10.255.253.3:5000';
 
 const theme = createTheme({
   palette: {
