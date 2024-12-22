@@ -40,71 +40,42 @@ class ChatService:
                 return False
             
     def handle_text_message(self, data):
-        room = data.get('room')
-        message = data.get('message')
-        
-        new_message = Message(
-            sender_id=message['sender_id'],
-            receiver_id=message.get('receiver_id', 0),
-            group_id=message.get('group_id', 0),
-            content=message['content'],
-            type='text'
-        )
-        
-        db.session.add(new_message)
-        db.session.commit()
-        
-        emit('message', {
-            **message,
-            'id': new_message.id,
-            'created_at': new_message.created_at.isoformat()
-        }, room=room)
-        return True
+        return self.handle_message(data)
         
     def handle_file_message(self, data):
-        room = data.get('room')
-        message = data.get('message')
-        
-        new_message = Message(
-            sender_id=message['sender_id'],
-            receiver_id=message.get('receiver_id', 0),
-            group_id=message.get('group_id', 0),
-            content=message['content'],
-            type='file',
-            file_url=message.get('file_url')
-        )
-        
-        db.session.add(new_message)
-        db.session.commit()
-        
-        emit('message', {
-            **message,
-            'id': new_message.id,
-            'created_at': new_message.created_at.isoformat()
-        }, room=room)
-        return True
+        return self.handle_message(data)
         
     def handle_emoji_message(self, data):
-        room = data.get('room')
-        message = data.get('message')
-        
-        new_message = Message(
-            sender_id=message['sender_id'],
-            receiver_id=message.get('receiver_id', 0),
-            group_id=message.get('group_id', 0),
-            content=message['content'],
-            type='emoji'
-        )
-        
-        db.session.add(new_message)
-        db.session.commit()
-        
-        emit('message', {
-            **message,
-            'id': new_message.id,
-            'created_at': new_message.created_at.isoformat()
-        }, room=room)
-        return True
+        return self.handle_message(data)
+
+    def handle_message(self, data):
+        try:
+            message = data.get('message')
+            sender = User.query.get(message['sender_id'])
+            
+            new_message = Message(
+                sender_id=message['sender_id'],
+                receiver_id=message.get('receiver_id', 0),
+                group_id=message.get('group_id', 0),
+                content=message['content'],
+                type=message['type'],
+                sender_name=sender.username
+            )
+            
+            new_message.save()
+            
+            emit('message', {
+                **message,
+                'id': new_message.id,
+                'sender_name': sender.username,
+                'created_at': new_message.created_at.isoformat()
+            }, room=data.get('room'))
+            
+            return True
+        except Exception as e:
+            print(f"处理消息错误: {str(e)}")
+            emit('error', {'msg': str(e)})
+            return False
 
     @staticmethod
     def send_text_message(sender_id, receiver_id = 0, group_id = 0, content = '', status = 'sent'):

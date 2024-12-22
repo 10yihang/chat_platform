@@ -67,7 +67,7 @@ def get_history():
                 ((Message.sender_id == friend_id) & (Message.receiver_id == user_id))
             )
             
-        messages = query.order_by(Message.created_at.desc()).limit(50).all()
+        messages = query.order_by(Message.created_at.asc()).limit(50).all()
         return jsonify([msg.to_dict() for msg in messages]), 200
         
     except Exception as e:
