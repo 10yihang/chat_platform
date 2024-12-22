@@ -77,7 +77,7 @@ def login():
             db.session.add(login_log)
             db.session.commit()
             return jsonify({'message': '邮箱或密码错误'}), 401
-
+        
         token = ChatService.generate_token(user.id)
 
         login_log = LoginLog(
@@ -89,13 +89,17 @@ def login():
         db.session.add(login_log)
         db.session.commit()
 
+        print(f'发送的token: {token}')
+
         return jsonify({
             'message': '登录成功',
             'username': user.username,
             'email': user.email,
+            'userId': user.id,
             'token': token
         }), 200
 
     except Exception as e:
+        print(e)
         db.session.rollback()
         return jsonify({'message': '服务器错误'}), 500
