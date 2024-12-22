@@ -43,6 +43,7 @@ class Message(db.Model):
         }
     
     def save(self):
+        print(self.sender_id, self.receiver_id, self.group_id)
         if None in [self.sender_id, self.receiver_id, self.group_id]:
             raise Exception('Sender ID, Receiver ID, or Group ID is required')
         if not self.sender_id:

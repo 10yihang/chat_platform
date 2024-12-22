@@ -11,3 +11,5 @@ class Group(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     type = db.Column(db.Enum('public', 'private'), default='private')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    

@@ -1,11 +1,111 @@
 from flask import Blueprint, request, jsonify
 from models.message import Message
 import jwt
-from jwt import encode
+from jwt import encode, decode
 from models.user import User
 from config import Config
+from datetime import datetime, timedelta, timezone
+from extensions import db
+from websocket import socketio
+from models.group_member import GroupMember
+from flask_socketio import emit, join_room, leave_room
 
 class ChatService:
+    def __init__(self):
+        self.setup_socket_handlers()
+        
+    def setup_socket_handlers(self):
+        @socketio.on('chat')
+        def handle_message(data):
+            try:
+                message_type = data.get('message', {}).get('type')
+                if not message_type:
+                    raise ValueError("消息类型不能为空")
+                    
+                handlers = {
+                    'text': self.handle_text_message,
+                    'file': self.handle_file_message,
+                    'emoji': self.handle_emoji_message
+                }
+                
+                handler = handlers.get(message_type)
+                if not handler:
+                    raise ValueError(f"不支持的消息类型: {message_type}")
+                    
+                return handler(data)
+                
+            except Exception as e:
+                print(f"处理消息错误: {str(e)}")
+                emit('error', {'msg': str(e)})
+                return False
+            
+    def handle_text_message(self, data):
+        room = data.get('room')
+        message = data.get('message')
+        
+        new_message = Message(
+            sender_id=message['sender_id'],
+            receiver_id=message.get('receiver_id', 0),
+            group_id=message.get('group_id', 0),
+            content=message['content'],
+            type='text'
+        )
+        
+        db.session.add(new_message)
+        db.session.commit()
+        
+        emit('message', {
+            **message,
+            'id': new_message.id,
+            'created_at': new_message.created_at.isoformat()
+        }, room=room)
+        return True
+        
+    def handle_file_message(self, data):
+        room = data.get('room')
+        message = data.get('message')
+        
+        new_message = Message(
+            sender_id=message['sender_id'],
+            receiver_id=message.get('receiver_id', 0),
+            group_id=message.get('group_id', 0),
+            content=message['content'],
+            type='file',
+            file_url=message.get('file_url')
+        )
+        
+        db.session.add(new_message)
+        db.session.commit()
+        
+        emit('message', {
+            **message,
+            'id': new_message.id,
+            'created_at': new_message.created_at.isoformat()
+        }, room=room)
+        return True
+        
+    def handle_emoji_message(self, data):
+        room = data.get('room')
+        message = data.get('message')
+        
+        new_message = Message(
+            sender_id=message['sender_id'],
+            receiver_id=message.get('receiver_id', 0),
+            group_id=message.get('group_id', 0),
+            content=message['content'],
+            type='emoji'
+        )
+        
+        db.session.add(new_message)
+        db.session.commit()
+        
+        emit('message', {
+            **message,
+            'id': new_message.id,
+            'created_at': new_message.created_at.isoformat()
+        }, room=room)
+        return True
+
     @staticmethod
     def send_text_message(sender_id, receiver_id = 0, group_id = 0, content = '', status = 'sent'):
         message = Message(
@@ -52,7 +152,20 @@ class ChatService:
     
     @staticmethod
     def generate_token(user_id):
-        return jwt.encode({'user_id': user_id}, Config.SECRET_KEY, algorithm='HS256')
+        payload = {
+            'user_id': user_id,
+            'exp': datetime.now(timezone.utc) + timedelta(hours=24),  # 过期时间
+            'iat': datetime.now(timezone.utc),  # 签发时间
+            'sub': str(user_id)  # JWT标准声明
+        }
+        token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
+        try:
+            decode_token = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
+            print(f'解码后的token: {decode_token}')
+            print(f'user_id: {decode_token.get("user_id")}')
+        except:
+            return '生成token失败'
+        return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
 
 chat_bp = Blueprint('chat', __name__)
 

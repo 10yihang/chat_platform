@@ -1,18 +1,19 @@
-from flask import Flask, request
-from flask_cors import CORS
+import jwt
+from datetime import datetime, timedelta, timezone
 
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {
-    "origins": "*",
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": "*"
-}})
+JWT_SECRET_KEY = "2GaM3DbkU6ReLNKMzOg3DjgHMYhJArsSWWNRx3A4t/Q="  # 直接使用你提供的密钥进行测试
 
-@app.route('/api/auth/login', methods=['POST','OPTIONS'])
-def login():
-    if request.method == 'OPTIONS':
-        return {"message": "Options OK"}, 200
-    return {"message": "Login successful!"}, 200
+payload = {
+    'user_id': 2,
+    'exp': datetime.now(timezone.utc) + timedelta(hours=24),
+    'iat': datetime.now(timezone.utc),
+    'sub': "2"
+}
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+try:
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+    print(f"Generated Token: {token}")
+    decoded_token = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+    print(f"Decoded Token: {decoded_token}")
+except Exception as e:
+    print(f"Error: {e}")
