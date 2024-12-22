@@ -16,9 +16,11 @@ import { Box, CircularProgress } from '@mui/material';
 
 declare global {
   var preUrl: string;
+  var socketUrl: string;
 }
 
 global.preUrl = 'http://10.255.253.3:5000';
+global.socketUrl = 'ws://10.255.253.3:5000';
 
 const theme = createTheme({
   palette: {

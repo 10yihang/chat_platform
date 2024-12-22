@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from services.chat import ChatService
+from models.message import Message
 
 chat_bp = Blueprint('chat', __name__)
 chat_service = ChatService()
@@ -47,3 +48,27 @@ def receive_messages(user_id):
     # messages = {'message': 'Messages received!'}
     # return jsonify(messages), 200
     return 200
+
+@chat_bp.route('/history', methods=['POST'])
+def get_history():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        group_id = data.get('groupId')
+        friend_id = data.get('friendId')
+        
+        query = Message.query
+        
+        if group_id:
+            query = query.filter(Message.group_id == group_id)
+        elif friend_id:
+            query = query.filter(
+                ((Message.sender_id == user_id) & (Message.receiver_id == friend_id)) |
+                ((Message.sender_id == friend_id) & (Message.receiver_id == user_id))
+            )
+            
+        messages = query.order_by(Message.created_at.desc()).limit(50).all()
+        return jsonify([msg.to_dict() for msg in messages]), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
