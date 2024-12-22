@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": ["http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://localhost:8000"]}})
     
     print(Config.SECRET_KEY)
     app.config.from_object(Config)
@@ -31,4 +31,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     print('数据库初始化完成')
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')
