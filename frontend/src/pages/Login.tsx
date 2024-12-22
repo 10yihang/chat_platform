@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Card, TextField, Button, Typography, Stack, Divider, Alert } from '@mui/material';
+import { Box, Card, TextField, Button, Typography, Stack, Divider, Alert, CircularProgress } from '@mui/material';
 
 interface LoginProps {
   onLogin: (isGuest?: boolean) => void;
@@ -14,6 +14,48 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const handleLogin = async (isGuest?: boolean) => {
+    console.log(preUrl);
+    setError(null);
+
+    if (!email || !password) {
+      console.log(email, password);
+      setError('邮箱和密码均为必填项');
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const response = await fetch(preUrl + '/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('email', data.email);
+        onLogin(isGuest);
+      } else {
+        setError(data.message || '登录失败');
+      }
+    } catch (err) {
+      setError('网络错误，请稍后重试');
+    } finally {
+      setLoginLoading(false);
+    }
+
+    console.log('登录信息:', { email, password });
+  };
 
   const handleGuestLogin = () => {
     if (username) {
@@ -40,8 +82,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
+    setRegisterLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(preUrl + '/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,6 +109,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     } catch (err) {
       setError('网络错误，请稍后重试');
+    } finally {
+      setRegisterLoading(false);
     }
 
     console.log('注册信息:', { username, password, email });
@@ -81,14 +126,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {!isGuest ? (
             !isRegistering ? (
               <>
-                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
+                <TextField label="邮箱" fullWidth onChange={(e) => setEmail(e.target.value)} />
                 <TextField label="密码" type="password" fullWidth onChange={(e) => setPassword(e.target.value)} />
-                <Button variant="contained" fullWidth onClick={() => onLogin(false)}>
-                  登录
+                <Button variant="contained" fullWidth onClick={() => handleLogin()}>
+                  {loginLoading ? <CircularProgress size={24} /> : '登录'}
                 </Button>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <Button variant="outlined" fullWidth onClick={() => setIsRegistering(true)}>
-                    注册
+                    {registerLoading ? <CircularProgress size={24} /> : '注册'}
                   </Button>
                   <Divider style={{ margin: "0 10px" }}>或</Divider>
                   <Button variant="outlined" fullWidth onClick={() => setIsGuest(true)}>
@@ -103,7 +148,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <TextField label="确认密码" type="password" fullWidth onChange={(e) => setConfirmPassword(e.target.value)} />
                 <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
                 <Button variant="contained" fullWidth onClick={handleRegister}>
-                  注册
+                  {registerLoading ? <CircularProgress size={24} /> : '注册'}
                 </Button>
                 <Button variant="text" onClick={() => setIsRegistering(false)}>
                   返回登录
