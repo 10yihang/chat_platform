@@ -5,23 +5,54 @@ from extensions import db
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.media import media_bp
+from routes.user import user_bp
+from routes.group import group_bp
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from dotenv import load_dotenv
+from flask_socketio import SocketIO
+from websocket import socketio
+from flask_jwt_extended import JWTManager
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, resources={r"/api/*": {"origins": ["http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://localhost:8000"]}})
     
-    print(Config.SECRET_KEY)
+    # 配置CORS
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:8000", "http://10.255.253.3:8000"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        },
+        r"/socket.io/*": {
+            "origins": ["http://localhost:8000", "http://10.255.253.3:8000"],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
+    
     app.config.from_object(Config)
-    app.config['CORS_HEADERS'] = 'Content-Type'
-    
+    print(app.config['JWT_SECRET_KEY'])
     db.init_app(app)
+    JWTManager(app)
     
+    # 配置 SocketIO
+    socketio.init_app(app, 
+        cors_allowed_origins="*",
+        async_mode='eventlet',
+        ping_timeout=60,
+        ping_interval=25,
+        logger=True,
+        engineio_logger=True)
+    
+    # 注册蓝图
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
     app.register_blueprint(media_bp, url_prefix='/api/media')
+    app.register_blueprint(user_bp, url_prefix='/api/user')
+    app.register_blueprint(group_bp, url_prefix='/api/group')
     
     return app
 
@@ -31,4 +62,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     print('数据库初始化完成')
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    socketio.run(app, debug=True, port=5000, host='0.0.0.0')
