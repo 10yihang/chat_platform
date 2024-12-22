@@ -3,10 +3,6 @@ from extensions import db
 from models.user import User
 user_bp = Blueprint('user', __name__)
 
-@user_bp.route('/profile', methods=['GET'])
-def get_profile():
-    return jsonify({'message': 'writing'}), 200
-
 @user_bp.route('/update', methods=['PUT'])
 def update_profile():
     return jsonify({'message': 'writing'}), 200
