@@ -31,13 +31,17 @@ def handle_connect(auth):
             if not user_id:
                 raise Exception('Token中未包含用户ID')
             
+            friends = Friendship.query.filter_by(user_id=user_id).all()
+
+            for friend in friends:
+                room_id = f'friend_{friend.friend_id}'
+                join_room(room_id)
+
             user_groups = GroupMember.query.filter_by(user_id=user_id).all()
             
             for group in user_groups:
                 room_id = f'group_{group.group_id}'
                 join_room(room_id)
-
-            join_room(f'group_1')  
             
             emit('status', {'msg': '连接成功'})
             return True
