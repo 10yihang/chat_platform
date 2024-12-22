@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from extensions import db
 
 class Message(db.Model):
@@ -6,15 +6,16 @@ class Message(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_name = db.Column(db.String(80))
     receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     group_id = db.Column(db.Integer, nullable = True)
     content = db.Column(db.Text, nullable=False)
     type = db.Column(db.String(20), default='text')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now())
     status = db.Column(db.String(20), default='sent')
     file_url = db.Column(db.String(255))
 
-    def __init__(self, sender_id, receiver_id = 0, group_id = 0, content = '', type = 'text', file_url = '', status = 'sent'):
+    def __init__(self, sender_id, receiver_id = 0, group_id = 0, content = '', type = 'text', file_url = '', status = 'sent', sender_name = ''):
         self.sender_id = sender_id
         self.receiver_id = receiver_id
         self.group_id = group_id
@@ -22,6 +23,7 @@ class Message(db.Model):
         self.type = type
         self.file_url = file_url
         self.status = status
+        self.sender_name = sender_name
 
     def __str__(self):
         return f'Message: {self.id}, {self.sender_id}, {self.receiver_id}, {self.group_id}, {self.content}, {self.type}, {self.created_at}, {self.status}, {self.file_url}'
@@ -39,7 +41,8 @@ class Message(db.Model):
             'type': self.type,
             'created_at': self.created_at,
             'status': self.status,
-            'file_url': self.file_url
+            'file_url': self.file_url,
+            'sender_name': self.sender_name
         }
     
     def save(self):

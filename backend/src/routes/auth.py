@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models.user import User  
 from services.chat import ChatService  
 from models.login_log import LoginLog
+from models.group_member import GroupMember
 from sqlalchemy import or_
 from extensions import db
 from flask_sqlalchemy import SQLAlchemy
@@ -42,6 +43,13 @@ def register():
         )
         print(new_user)
         new_user.save()
+
+        GroupMember(
+            user_id=new_user.id,
+            group_id=1,
+            role='member'
+        ).save()
+
         return jsonify({
             'message': '注册成功',
             'user': {
@@ -50,6 +58,9 @@ def register():
                 'email': new_user.email
             }
         }), 200
+    
+
+
     except Exception as e:
         db.session.rollback()
         print(e)

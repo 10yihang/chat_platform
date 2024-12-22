@@ -24,6 +24,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
       <Button color="inherit" component={RouterLink} to="/room">
         聊天室
       </Button>
+      <Button color="inherit" component={RouterLink} to="/profile">
+        个人资料
+      </Button>
       <Button
         color="inherit"
         onClick={handleLogout}

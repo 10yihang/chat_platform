@@ -7,9 +7,11 @@ interface ChatWindowProps {
   chatName?: string;
   groupId?: string;
   friendId?: string;
+  userName?: string;
+  avatar?: string;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
   const [title, setTitle] = useState<string>('');
 
   useEffect(() => {
@@ -37,11 +39,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId })
   }, [channelId, groupId, friendId]);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      <Box sx={{ 
+        p: 2, 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        backgroundColor: '#fff',
+        zIndex: 1000
+      }}>
         {title || '加载中...'}
       </Box>
-      <Chat channelId={channelId} groupId={groupId} friendId={friendId} />
+      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+        <Chat 
+          channelId={channelId} 
+          groupId={groupId} 
+          friendId={friendId} 
+          userName={userName} 
+          avatar={avatar}
+        />
+      </Box>
     </Box>
   );
 };
