@@ -7,11 +7,15 @@ from routes.chat import chat_bp
 from routes.media import media_bp
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
+from dotenv import load_dotenv
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
+    
+    print(Config.SECRET_KEY)
     app.config.from_object(Config)
+    app.config['CORS_HEADERS'] = 'Content-Type'
     
     db.init_app(app)
     
@@ -22,8 +26,9 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    load_dotenv()
     app = create_app()
     with app.app_context():
         db.create_all()
     print('数据库初始化完成')
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True, port=5000)
