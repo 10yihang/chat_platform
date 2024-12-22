@@ -23,6 +23,7 @@ wheels/
 .env
 venv/
 ENV/
+test.py
 
 # Flask
 instance/
