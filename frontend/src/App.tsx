@@ -14,6 +14,12 @@ import VideoCall from './components/VideoCall';
 import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
 
+declare global {
+  var preUrl: string;
+}
+
+global.preUrl = 'http://127.0.0.1:5000';
+
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -62,6 +68,12 @@ const App: React.FC = () => {
     setIsGuest(isGuestLogin || false);
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setIsGuest(false);
+    localStorage.removeItem('token');
+  };
+
   // 检查用户认证状态
   React.useEffect(() => {
     const checkAuth = async () => {
@@ -105,7 +117,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         ) : (
-          <Layout>
+          <Layout onLogout={handleLogout}>
             <Routes>
               <Route path="/" element={<ChatApp />} />
               {!isGuest && (
