@@ -52,7 +52,7 @@ def handle_connect(auth):
         
         # 加入私人房间（如果未加入）
         private_room = f'user_{user_id}'
-        if private_room not in current_rooms:
+        if (private_room not in current_rooms):
             join_room(private_room)
             print(f"用户 {user_id} 加入私人房间: {private_room}")
         
@@ -92,8 +92,8 @@ def handle_disconnect():
         token = request.args.get('token')
         if token:
             user_id = decode_token(token).get('user_id')
+            print(f'disconnect {user_id}')
             
-            # 离开所有房间
             if user_id in user_rooms:
                 room_list = [user_rooms[user_id]['private']] + user_rooms[user_id]['groups']
                 for room in room_list:
@@ -106,3 +106,25 @@ def handle_disconnect():
             
     except Exception as e:
         print(f"断开连接错误: {str(e)}")
+
+
+@socketio.on('get_online_status')
+def handle_get_online_status(data):
+    user_ids = data.get('user_ids', [])
+    online_status = {
+        user_id: user_id in OnlineUserManager.get_online_users()
+        for user_id in user_ids
+    }
+    emit('online_status_update', online_status)
+
+@socketio.on('user_online')
+def handle_user_online(data):
+    user_id = data.get('user_id')
+    if user_id:
+        emit('user_online', user_id, broadcast=True)
+
+@socketio.on('user_offline')
+def handle_user_offline(data):
+    user_id = data.get('user_id')
+    if user_id:
+        emit('user_offline', user_id, broadcast=True)

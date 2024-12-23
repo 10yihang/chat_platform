@@ -5,29 +5,13 @@ import Navigation from './Navigation';
 import { LayoutProps } from '../types';
 import {StyledRoot, StyledMain} from '../styles';
 
-const Layout: React.FC<LayoutProps> = ({ children, onLogout = () => {}, socket }) => {
-  useEffect(() => {
-    const checkSocket = async () => {
-      if (socket) {
-        socket.on('message', (data: any) => {
-          console.log('Layout收到消息:', data);
-        });
-      }
-  
-      return () => {
-        if (socket) {
-          socket.off('message');
-        }
-      };
-    };
-  })
-
+const Layout: React.FC<LayoutProps> = ({ children, onLogout = () => {}}) => {
 
   return (
     <StyledRoot>
       <AppBar position="fixed">
         <Toolbar>
-          <Navigation onLogout={onLogout} socket={socket} />
+          <Navigation onLogout={onLogout}/>
         </Toolbar>
       </AppBar>
       <StyledMain>

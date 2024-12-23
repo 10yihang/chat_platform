@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models.message import Message
-import jwt
+import jwt, time, os
+from werkzeug.utils import secure_filename
 from jwt import encode, decode
 from models.user import User
 from config import Config
@@ -11,6 +12,7 @@ from models.group_member import GroupMember
 from flask_socketio import emit, join_room, leave_room
 
 class ChatService:
+
     def __init__(self):
         self.setup_socket_handlers()
         
@@ -40,15 +42,6 @@ class ChatService:
                 return False
             
     def handle_text_message(self, data):
-        return self.handle_message(data)
-        
-    def handle_file_message(self, data):
-        return self.handle_message(data)
-        
-    def handle_emoji_message(self, data):
-        return self.handle_message(data)
-
-    def handle_message(self, data):
         try:
             message = data.get('message')
             sender = User.query.get(message['sender_id'])
@@ -76,6 +69,76 @@ class ChatService:
             print(f"处理消息错误: {str(e)}")
             emit('error', {'msg': str(e)})
             return False
+    
+    def handle_file_message(self, data):
+        try:
+            UPLOAD_FOLDER = Config.UPLOAD_FOLDER
+
+            message = data.get('message', {})
+            file_data = data.get('file')
+            
+            if not file_data or not isinstance(file_data, dict):
+                raise Exception('未提供文件或文件格式错误')
+                
+            sender = User.query.get(message.get('sender_id'))
+            if not sender:
+                raise Exception('发送者不存在')
+
+            # 生成唯一文件名
+            filename = secure_filename(file_data.get('name', ''))
+            unique_filename = f'{sender.id}_{int(time.time())}_{filename}'
+
+            # 确保上传目录存在
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER)
+
+            # 保存文件
+            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+            with open(file_path, 'wb') as f:
+                binary_data = bytes(file_data.get('data', []))
+                f.write(binary_data)
+
+            # 生成文件URL
+            file_url = f'/uploads/{unique_filename}'
+
+            # 创建消息记录
+            new_message = Message(
+                sender_id=message.get('sender_id'),
+                receiver_id=message.get('receiver_id', 0),
+                group_id=message.get('group_id', 0),
+                content=message.get('content'),
+                type='file',
+                sender_name=sender.username,
+                file_url=file_url
+            )
+            
+            new_message.save()
+            
+            # 发送消息通知
+            emit('file_uploaded', {
+                'id': new_message.id,
+                'sender_id': new_message.sender_id,
+                'receiver_id': new_message.receiver_id,
+                'group_id': new_message.group_id,
+                'content': new_message.content,
+                'type': 'file',
+                'sender_name': sender.username,
+                'created_at': new_message.created_at.isoformat(),
+                'file_url': file_url
+            }, room=message.get('room'))
+            
+            return True
+            
+        except Exception as e:
+            print(f"处理文件错误: {str(e)}")
+            emit('error', {'msg': str(e)})
+            return False
+        
+    def handle_emoji_message(self, data):
+        return self.handle_message(data)
+
+    def handle_message(self, data):
+        pass
 
     @staticmethod
     def send_text_message(sender_id, receiver_id = 0, group_id = 0, content = '', status = 'sent'):
@@ -139,17 +202,6 @@ class ChatService:
         return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
 
 chat_bp = Blueprint('chat', __name__)
-
-@chat_bp.route('/send', methods=['POST'])
-def send_message():
-    data = request.json
-    chat_service = ChatService()
-    message = chat_service.send_message(
-        sender_id=data['sender_id'],
-        receiver_id=data['receiver_id'],
-        content=data['content']
-    )
-    return jsonify({'status': 'success', 'message': 'Message sent'}), 200
 
 @chat_bp.route('/receive/<user_id>', methods=['GET'])
 def receive_messages(user_id):

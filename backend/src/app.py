@@ -1,10 +1,9 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from config import Config
 from extensions import db, socketio, redis_client
 from routes.auth import auth_bp
 from routes.chat import chat_bp
-from routes.media import media_bp
 from routes.user import user_bp
 from routes.group import group_bp
 from routes.profile import profile_bp
@@ -33,6 +32,9 @@ def create_app():
     })
     
     app.config.from_object(Config)
+    app.add_url_rule('/uploads/<filename>', 'uploaded_file',
+        lambda filename: send_from_directory(app.config['UPLOAD_FOLDER'],
+        filename))
     db.init_app(app)
     print(app.config['JWT_SECRET_KEY'])
     redis_client.init_app(app)
@@ -51,7 +53,6 @@ def create_app():
     # 注册蓝图
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
-    app.register_blueprint(media_bp, url_prefix='/api/media')
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(group_bp, url_prefix='/api/group')
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
