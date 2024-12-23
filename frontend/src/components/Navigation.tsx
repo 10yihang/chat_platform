@@ -5,15 +5,16 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import FriendRequestNotification from './notifications/FriendRequestNotification';
 import { NavigationProps, FriendRequestData } from '../types';
+import SocketProvider, { useSocketContext } from '../contexts/SocketContextProvider';
 
-const Navigation: React.FC<NavigationProps> = ({ onLogout, socket }) => {
+const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
   const navigate = useNavigate();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const hasUnread = notifications.some(n => !n.read);
+  const {socket, isConnected} = useSocketContext();
 
   useEffect(() => {
-    console.log('Navigation socket:', socket);
     interface Notification {
       type: 'friend_request';
       data: FriendRequestData;
@@ -21,19 +22,8 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout, socket }) => {
     }
 
     if (socket) {
-      console.log('Socket:', socket);
-      console.log('Socket connected status:', socket.connected);
-      console.log('Socket connected, listening for friend requests');
-      
-      socket.on('connect', () => {
-        console.log('Socket connected');
-      });
 
-      socket.on('disconnect', () => {
-        console.log('Socket disconnected');
-      });
-
-      socket.on('friend_request_received', (data: FriendRequestData) => {
+      socket?.on('friend_request_received', (data: FriendRequestData) => {
         console.log('收到好友请求:', data);
         setNotifications(prev => [...prev, {
           type: 'friend_request',
@@ -45,12 +35,10 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout, socket }) => {
 
     return () => {
       if (socket) {
-        socket.off('connect');
-        socket.off('disconnect');
         socket.off('friend_request_received');
       }
     };
-  }, [socket]);
+  }, [socket, isConnected]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -59,7 +47,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout, socket }) => {
   };
 
   return (
+
     <Stack direction="row" spacing={2} sx={{ ml: 'auto' }}>
+
       <IconButton 
         color="inherit" 
         onClick={() => setNotificationOpen(true)}
@@ -122,7 +112,9 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout, socket }) => {
           })}
         </Box>
       </Drawer>
+
     </Stack>
+
   );
 };
 

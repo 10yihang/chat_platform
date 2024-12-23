@@ -4,4 +4,4 @@ from flask import Blueprint
 routes = Blueprint('routes', __name__)
 
 # 导入路由
-from . import auth, chat, media
+from . import auth, chat

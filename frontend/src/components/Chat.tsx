@@ -7,7 +7,10 @@ import { styled } from '@mui/material/styles';
 import UserProfileDialog from './UserProfileDialog';
 import MessageBubble from './MessageBubble';
 import { Message, ChatProps } from '../types';
-import {ChatContainer, MessagesContainer, InputContainer} from '../styles';
+import SocketProvider, { useSocketContext } from '../contexts/SocketContextProvider';
+import { ChatContainer, MessagesContainer, InputContainer } from '../styles';
+import { message } from 'antd';
+import { Socket } from 'socket.io-client';
 
 const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -15,9 +18,11 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
     const messagesEndRef = useRef<null | HTMLDivElement>(null);
     const fileInputRef = useRef<null | HTMLInputElement>(null);
     const roomId = channelId === 'public' ? 'group_1' : `group_${groupId}` || `friend_${friendId}`;
-
+    const { socket, isConnected } = useSocketContext();
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+    const messageShownRef = useRef(false);
+
 
     const handleAvatarClick = (userId: number) => {
         setSelectedUserId(userId);
@@ -40,31 +45,31 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
                 const response = await fetch(`${global.preUrl}/api/chat/history`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     },
                     body: JSON.stringify({
-                        userId: localStorage.getItem('userId'),
-                        groupId: groupId || (channelId === 'public' ? 1 : null),
+                        channelId: channelId,
+                        groupId: groupId,
                         friendId: friendId
                     })
                 });
-
                 const data = await response.json();
-                console.log(data)
-                // 使用Set去重
-                const uniqueMessages = Array.from(
-                    new Map(data.map((item: Message) => [item.id, item])).values()
-                );
-                setMessages((uniqueMessages as Message[])); // 反转消息顺序以显示最新消息在底部
+                setMessages(data);
             } catch (error) {
                 console.error('获取历史消息失败:', error);
             }
         };
 
         loadHistory();
+    }, [channelId, groupId, friendId]); // 添加依赖项，确保切换聊天时重新加载
 
+    useEffect(() => {
         if (socket) {
             socket.on('message', (message: Message) => {
+                setMessages(prev => [...prev, message]);
+            });
+            socket.on('file_uploaded', (message: Message) => {
                 setMessages(prev => [...prev, message]);
             });
         }
@@ -72,34 +77,34 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
         return () => {
             socket?.off('message');
         };
-    }, [socket, channelId, groupId, friendId]);
+    }, [socket, isConnected, channelId, groupId, friendId]);
 
-    useEffect(() => {
-        if (socket) {
-            socket.on('message', (newMsg: Message) => {
-                console.log('收到新消息:', newMsg);
-                setMessages(prev => {
-                    const exists = prev.some(msg => msg.id === newMsg.id);
-                    if (exists) {
-                        return prev;
-                    }
-                    const newMessages = [...prev, newMsg];
-                    // 使用 setTimeout 确保 DOM 已更新
-                    setTimeout(scrollToBottom, 100);
-                    return newMessages;
-                });
-            });
+    // useEffect(() => {
+    //     if (socket && isConnected) {
+    //         const handleMessage = (newMsg: Message) => {
+    //             setMessages(prev => {
+    //                 const exists = prev.some(msg => msg.id === newMsg.id);
+    //                 if (exists) return prev;
+    //                 const newMessages = [...prev, newMsg];
+    //                 setTimeout(scrollToBottom, 100);
+    //                 return newMessages;
+    //             });
+    //         };
 
-            socket.on('error', (error: any) => {
-                console.error('Socket错误:', error);
-            });
+    //         socket.on('message', handleMessage);
+    //         socket.on('file_uploaded', handleMessage);
+    //         socket.on('error', (error: any) => {
+    //             console.error('Socket错误:', error);
+    //             message.error('发送失败：' + error.msg);
+    //         });
 
-            return () => {
-                socket.off('message');
-                socket.off('error');
-            };
-        }
-    }, [socket, scrollToBottom]);
+    //         return () => {
+    //             socket.off('message');
+    //             socket.off('file_uploaded');
+    //             socket.off('error');
+    //         };
+    //     }
+    // }, [socket, isConnected, scrollToBottom]);
 
     const handleSend = async () => {
         if (!newMessage.trim()) return;
@@ -130,95 +135,104 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const uploadResponse = await fetch(`${global.preUrl}/api/media/upload`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (uploadResponse.ok) {
-                const { file_url } = await uploadResponse.json();
-                await fetch(`${global.preUrl}/api/chat/send`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sender_id: localStorage.getItem('userId'),
-                        receiver_id: 0,
-                        group_id: 1,
-                        content: file.name,
-                        type: 'file',
-                        file_url,
-                        status: 'sent'
-                    }),
-                });
-                // await fetchMessages();
-            }
-        } catch (error) {
-            console.error('上传文件失败:', error);
+        
+        if ((!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined') 
+            && localStorage.getItem('IsGuest') !== 'true') {
+            alert('请先登录');
+            return;
         }
+    
+        if (file.size > 20 * 1024 * 1024) {
+            alert('文件大小不能超过20MB');
+            return;
+        }
+    
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            if (!e.target?.result) return;
+    
+            const messageData = {
+                sender_id: parseInt(localStorage.getItem('userId') || '0'),
+                receiver_id: friendId ? parseInt(friendId) : 0,
+                group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
+                content: file.name,
+                type: 'file',
+                sender_name: userName,
+                room: roomId
+            };
+    
+            try {
+                const fileData = e.target.result;
+                socket?.emit('chat', { 
+                    message: messageData, 
+                    room: roomId,
+                    file: {
+                        name: file.name,
+                        type: file.type,
+                        data: Array.from(new Uint8Array(fileData as ArrayBuffer))
+                    }
+                });
+            } catch (error) {
+                console.error('发送文件失败:', error);
+            }
+        };
+        reader.readAsArrayBuffer(file);
     };
 
     return (
-        <ChatContainer>
-            <MessagesContainer>
-                {messages.map((message, index) => (
-                    <MessageBubble
-                        key={`${message.id}_${index}`}
-                        message={message}
-                        isown={message.sender_id.toString() === localStorage.getItem('userId')}
-                        avatar={avatar}
-                        onAvatarClick={() => handleAvatarClick(message.sender_id)}
-                    />
-                ))}
-                <div ref={messagesEndRef} style={{ height: 0 }} /> {/* 添加高度为0的占位元素 */}
-            </MessagesContainer>
+            <ChatContainer>
+                <MessagesContainer>
+                    {messages.map((message, index) => (
+                        <MessageBubble
+                            key={`${message.id}_${index}`}
+                            message={message}
+                            isown={message.sender_id.toString() === localStorage.getItem('userId')}
+                            avatar={avatar}
+                            onAvatarClick={() => handleAvatarClick(message.sender_id)}
+                        />
+                    ))}
+                    <div ref={messagesEndRef} style={{ height: 0 }} /> {/* 添加高度为0的占位元素 */}
+                </MessagesContainer>
 
-            <UserProfileDialog
-                open={profileDialogOpen}
-                onClose={() => setProfileDialogOpen(false)}
-                userId={selectedUserId || 0}
-                socket={socket}
-            />
+                <UserProfileDialog
+                    open={profileDialogOpen}
+                    onClose={() => setProfileDialogOpen(false)}
+                    userId={selectedUserId || 0}
+                />
 
-            <InputContainer>
-                <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        onChange={handleFileUpload}
-                    />
-                    <IconButton onClick={() => fileInputRef.current?.click()}>
-                        <AttachFileIcon />
-                    </IconButton>
-                    <TextField
-                        fullWidth
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSend();
+                <InputContainer>
+                    <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={handleFileUpload}
+                        />
+                        <IconButton onClick={() => fileInputRef.current?.click()}>
+                            <AttachFileIcon />
+                        </IconButton>
+                        <TextField
+                            fullWidth
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
                             }
-                        }
-                        }
-                        placeholder="输入消息..."
-                        multiline
-                        maxRows={4}
-                        size="small"
-                    />
-                    <IconButton onClick={handleSend} color="primary">
-                        <SendIcon />
-                    </IconButton>
-                </Box>
-            </InputContainer>
-        </ChatContainer>
+                            }
+                            placeholder="输入消息..."
+                            multiline
+                            maxRows={4}
+                            size="small"
+                        />
+                        <IconButton onClick={handleSend} color="primary">
+                            <SendIcon />
+                        </IconButton>
+                    </Box>
+                </InputContainer>
+            </ChatContainer>
     );
 };
 

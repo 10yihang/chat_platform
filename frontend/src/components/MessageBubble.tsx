@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Typography, Avatar, Box, Paper } from '@mui/material';
+import { Typography, Avatar, Box, Paper, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { Message } from '../types';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 
 interface MessageBubbleProps {
   message: Message;
@@ -61,45 +62,65 @@ const MessageTime = styled(Typography)({
   textAlign: 'right'
 });
 
-const MessageBubbleComponent: React.FC<MessageBubbleProps> = ({ message, isown, avatar, onAvatarClick }) => {
-  const formattedTime = useMemo(() => {
-    const messageDate = new Date(message.created_at);
-    const now = new Date();
-    
-    messageDate.setHours(messageDate.getHours());
-    
-    const isToday = messageDate.toDateString() === now.toDateString();
-    
-    if (isToday) {
-      return messageDate.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-    return messageDate.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
+const formatTime = (createdAt: string) => {
+  const messageDate = new Date(createdAt);
+  const now = new Date();
+  
+  messageDate.setHours(messageDate.getHours());
+  
+  const isToday = messageDate.toDateString() === now.toDateString();
+  
+  if (isToday) {
+    return messageDate.toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit'
     });
-  }, [message.created_at]);
+  }
+  return messageDate.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isown, avatar, onAvatarClick }) => {
+  const renderContent = () => {
+    switch (message.type) {
+      case 'file':
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AttachFileIcon />
+            <Button
+              variant="text"
+              href={`${global.preUrl}${message.file_url}`}
+              target="_blank"
+              download
+              sx={{ color: 'inherit', textTransform: 'none' }}
+            >
+              {message.content}
+            </Button>
+          </Box>
+        );
+      default:
+        return message.content;
+    }
+  };
 
   return (
     <MessageWrapper isown={isown}>
-      <UserAvatar 
-        src={avatar} 
-        onClick={onAvatarClick}
-        sx={{ cursor: 'pointer' }}
-      />
+      <UserAvatar src={avatar} onClick={onAvatarClick} />
       <MessageContent isown={isown}>
-        {!isown && <UserName>{message.sender_name || '用户'}</UserName>}
+        {!isown && <UserName>{message.sender_name}</UserName>}
         <MessageBubbleContainer isown={isown}>
-          <MessageText>{message.content}</MessageText>
-          <MessageTime>{formattedTime}</MessageTime>
+          {renderContent()}
+          <MessageTime>
+            {formatTime(message.created_at)}
+          </MessageTime>
         </MessageBubbleContainer>
       </MessageContent>
     </MessageWrapper>
   );
 };
 
-export default React.memo(MessageBubbleComponent);
+export default React.memo(MessageBubble);
