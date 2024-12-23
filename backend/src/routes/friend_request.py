@@ -74,3 +74,54 @@ def handle_friend_request(data):
         print(f"处理好友请求错误: {str(e)}")
         emit('error', {'msg': str(e)}, room=request.sid)
         return False
+
+@socketio.on('friend_request_response')
+def handle_accept_friend_request(data):
+    try:
+        request_id = data.get('request_id')
+        request = FriendRequest.query.get(request_id)
+        
+        if not request:
+            raise Exception('好友请求不存在')
+        
+        sender_id = request.sender_id
+        receiver_id = request.receiver_id
+        
+        # 获取发送者和接收者信息
+        sender = User.query.get(sender_id)
+        receiver = User.query.get(receiver_id)
+        
+        friendship = Friendship(
+            user_id=sender_id,
+            friend_id=receiver_id,
+            status='accepted'
+        )
+        
+        db.session.add(friendship)
+        db.session.delete(request)
+        db.session.commit()
+        
+        print(f"好友请求已接受: {sender_id} -> {receiver_id}")
+        
+        room = [f'user_{sender_id}', f'user_{receiver_id}']
+        emit('friend_request_accepted', {
+            'sender': {
+                'id': sender.id,
+                'username': sender.username,
+                'avatar': sender.avatar,
+                'status': sender.status or 'offline'
+            },
+            'receiver': {
+                'id': receiver.id,
+                'username': receiver.username,
+                'avatar': receiver.avatar,
+                'status': receiver.status or 'offline'
+            }
+        }, room=room)
+        
+        return True
+        
+    except Exception as e:
+        print(f"接受好友请求错误: {str(e)}")
+        emit('error', {'msg': str(e)}, room=request.sid)
+        return False

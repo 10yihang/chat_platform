@@ -18,6 +18,58 @@ export const MessagesContainer = styled(Box)({
     width: '100%'
 });
 
+export const MessageContent = styled(Box)<{ isown: boolean }>(({ isown }) => ({
+  fontSize: '0.9rem',
+  lineHeight: 1.4,
+  whiteSpace: 'pre-wrap',
+  wordWrap: 'break-word',
+  flex: '0 1 auto'
+}));
+
+export const MessageWrapper = styled(Box)<{ isown: boolean }>(({ isown }) => ({
+  display: 'flex',
+  alignItems: 'flex-start',
+  marginBottom: '12px',
+  flexDirection: isown ? 'row-reverse' : 'row',
+  gap: '8px',
+  width: '100%',
+  padding: '0 20px'
+}));
+
+export const MessageBubbleContainer = styled(Paper)<{ isown: boolean }>(({ isown, theme }) => ({
+  padding: theme.spacing(1.5),
+  borderRadius: '12px',
+  minWidth: '120px',
+  backgroundColor: isown ? '#dcf8c6' : '#fff',
+  boxShadow: '0 1px 1px rgba(0,0,0,0.1)'
+}));
+
+export const MessageText = styled(Typography)({
+  fontSize: '0.9rem',
+  lineHeight: 1.4,
+  whiteSpace: 'pre-wrap',
+  wordWrap: 'break-word'
+});
+
+export const MessageTime = styled(Typography)({
+  fontSize: '0.75rem',
+  color: '#667781',
+  marginTop: '4px',
+  textAlign: 'right'
+});
+
+
+export const UserAvatar = styled(Avatar)({
+  width: 40,
+  height: 40
+});
+
+export const UserName = styled(Typography)({
+  fontSize: '0.8rem',
+  color: '#667781',
+  marginBottom: '4px'
+});
+
 export const InputContainer = styled(Box)({
     position: 'sticky',
     bottom: 0,

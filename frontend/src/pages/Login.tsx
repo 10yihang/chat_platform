@@ -45,6 +45,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('username', data.username);
         localStorage.setItem('email', data.email);
         localStorage.setItem('userId', data.userId);
+        localStorage.setItem('IsGuest', 'false');
+        localStorage.setItem('userName', data.username);
         onLogin(isGuest);
       } else {
         setError(data.message || '登录失败');

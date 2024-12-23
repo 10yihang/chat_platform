@@ -8,15 +8,13 @@ const ChatApp: React.FC = () => {
   const { id } = useParams();
   const location = useLocation();
   
-  // 根据路径确定聊天类型
   const isFriendChat = location.pathname.includes('/friend/');
   const isGroupChat = location.pathname.includes('/group/');
   
-  // 设置相应的属性
   const chatProps = {
     channelId: !id ? 'public' : undefined,
     friendId: isFriendChat ? id : undefined,
-    groupId: isGroupChat ? id : undefined
+    groupId: isGroupChat ? id : undefined,
   };
 
   return (
