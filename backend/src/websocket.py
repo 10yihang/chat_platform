@@ -2,11 +2,9 @@ from flask_socketio import emit, join_room, leave_room, rooms
 from extensions import db, socketio, redis_client
 from flask import request, current_app
 from models.group_member import GroupMember
-# from models.friendship import Friendship
-# from models.message import Message
-# from models.user import User
+from models.user import User
 from flask_jwt_extended import decode_token, verify_jwt_in_request, get_jwt_identity
-from utils.token_util import decode_jwt_token
+
 import jwt
 from config import Config
 
@@ -44,6 +42,9 @@ def handle_connect(auth):
             algorithms=["HS256"]
         )
         user_id = decoded_token.get('user_id')
+        user = User.query.get(user_id)
+        user.status = 'online'
+        db.session.commit()
         
         if not user_id:
             raise Exception('Token中未包含用户ID')
@@ -92,8 +93,11 @@ def handle_disconnect():
         token = request.args.get('token')
         if token:
             user_id = decode_token(token).get('user_id')
+            user = User.query.get(user_id)
+            user.status = 'offline'
+            db.session.commit()
             print(f'disconnect {user_id}')
-            
+
             if user_id in user_rooms:
                 room_list = [user_rooms[user_id]['private']] + user_rooms[user_id]['groups']
                 for room in room_list:

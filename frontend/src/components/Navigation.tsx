@@ -31,11 +31,22 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
           read: false
         } as Notification]);
       });
+
+      socket.on('friend_request_response', (data) => {
+        // 移除相关的好友请求通知
+        setNotifications(prev => 
+          prev.filter(n => 
+            !(n.type === 'friend_request' && n.data.request_id === data.request_id)
+          )
+        );
+      });
     }
 
     return () => {
       if (socket) {
         socket.off('friend_request_received');
+        socket.off('friend_request_accepted');
+        socket.off('friend_request_rejected');
       }
     };
   }, [socket, isConnected]);
@@ -85,24 +96,11 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
             if (notification.type === 'friend_request') {
               return (
                 <FriendRequestNotification
-                  key={index}
-                  sender={notification.data.sender}
-                  onAccept={() => {
-                    socket?.emit('friend_request_response', {
-                      request_id: notification.data.request_id,
-                      response: 'accepted'
-                    });
+                  key={notification.data.request_id}
+                  {...notification.data}
+                  onClose={() => {
                     setNotifications(prev => 
-                      prev.filter(n => n.data.request_id !== notification.data.request_id)
-                    );
-                  }}
-                  onReject={() => {
-                    socket?.emit('friend_request_response', {
-                      request_id: notification.data.request_id,
-                      response: 'rejected'
-                    });
-                    setNotifications(prev => 
-                      prev.filter(n => n.data.request_id !== notification.data.request_id)
+                      prev.filter((_, i) => i !== index)
                     );
                   }}
                 />

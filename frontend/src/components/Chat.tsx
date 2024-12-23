@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Box, TextField, Button, Paper, IconButton, Typography, Avatar } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -12,17 +12,22 @@ import { ChatContainer, MessagesContainer, InputContainer } from '../styles';
 import { message } from 'antd';
 import { Socket } from 'socket.io-client';
 
-const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
+const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<null | HTMLDivElement>(null);
     const fileInputRef = useRef<null | HTMLInputElement>(null);
-    const roomId = channelId === 'public' ? 'group_1' : `group_${groupId}` || `friend_${friendId}`;
     const { socket, isConnected } = useSocketContext();
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [profileDialogOpen, setProfileDialogOpen] = useState(false);
     const messageShownRef = useRef(false);
 
+    const roomId = useMemo(() => {
+        if (channelId === 'public') return 'group_1';
+        if (groupId) return `group_${groupId}`;
+        if (friendId) return [`user_${friendId}`, `user_${localStorage.getItem('userId')}`];
+        return '';
+    }, [channelId, groupId, friendId]);
 
     const handleAvatarClick = (userId: number) => {
         setSelectedUserId(userId);
@@ -65,46 +70,25 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
     }, [channelId, groupId, friendId]); // 添加依赖项，确保切换聊天时重新加载
 
     useEffect(() => {
-        if (socket) {
+        if (socket && roomId) {
+            // 监听特定房间的消息
             socket.on('message', (message: Message) => {
-                setMessages(prev => [...prev, message]);
-            });
-            socket.on('file_uploaded', (message: Message) => {
-                setMessages(prev => [...prev, message]);
+                if (message.group_id === (groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0) ||
+                    (message.receiver_id === parseInt(localStorage.getItem('userId') || '0') && 
+                     message.sender_id === (friendId ? parseInt(friendId) : 0)) ||
+                    (message.sender_id === parseInt(localStorage.getItem('userId') || '0') && 
+                     message.receiver_id === (friendId ? parseInt(friendId) : 0))) {
+                    setMessages(prev => [...prev, message]);
+                }
             });
         }
 
         return () => {
-            socket?.off('message');
+            if (socket) {
+                socket.off('message');
+            }
         };
-    }, [socket, isConnected, channelId, groupId, friendId]);
-
-    // useEffect(() => {
-    //     if (socket && isConnected) {
-    //         const handleMessage = (newMsg: Message) => {
-    //             setMessages(prev => {
-    //                 const exists = prev.some(msg => msg.id === newMsg.id);
-    //                 if (exists) return prev;
-    //                 const newMessages = [...prev, newMsg];
-    //                 setTimeout(scrollToBottom, 100);
-    //                 return newMessages;
-    //             });
-    //         };
-
-    //         socket.on('message', handleMessage);
-    //         socket.on('file_uploaded', handleMessage);
-    //         socket.on('error', (error: any) => {
-    //             console.error('Socket错误:', error);
-    //             message.error('发送失败：' + error.msg);
-    //         });
-
-    //         return () => {
-    //             socket.off('message');
-    //             socket.off('file_uploaded');
-    //             socket.off('error');
-    //         };
-    //     }
-    // }, [socket, isConnected, scrollToBottom]);
+    }, [socket, roomId, groupId, friendId, channelId]);
 
     const handleSend = async () => {
         if (!newMessage.trim()) return;
@@ -120,7 +104,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
             group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
             content: newMessage,
             type: 'text',
-            sender_name: userName,
+            sender_name: localStorage.getItem('userName') || '',
             room: roomId
         };
 
@@ -132,51 +116,82 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
         }
     };
 
+
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+
+        const CHUNK_SIZE = 100 * 1024; // 100KB
         
-        if ((!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined') 
-            && localStorage.getItem('IsGuest') !== 'true') {
-            alert('请先登录');
-            return;
-        }
-    
         if (file.size > 20 * 1024 * 1024) {
-            alert('文件大小不能超过20MB');
+            message.error('文件大小不能超过20MB');
             return;
         }
     
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            if (!e.target?.result) return;
-    
-            const messageData = {
-                sender_id: parseInt(localStorage.getItem('userId') || '0'),
-                receiver_id: friendId ? parseInt(friendId) : 0,
-                group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
-                content: file.name,
-                type: 'file',
-                sender_name: userName,
-                room: roomId
-            };
-    
-            try {
-                const fileData = e.target.result;
-                socket?.emit('chat', { 
-                    message: messageData, 
-                    room: roomId,
-                    file: {
-                        name: file.name,
-                        type: file.type,
-                        data: Array.from(new Uint8Array(fileData as ArrayBuffer))
-                    }
-                });
-            } catch (error) {
-                console.error('发送文件失败:', error);
-            }
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        
+        // 创建文件消息
+        const messageData = {
+            sender_id: parseInt(localStorage.getItem('userId') || '0'),
+            receiver_id: friendId ? parseInt(friendId) : 0,
+            group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
+            content: file.name,
+            type: 'file',
+            sender_name: localStorage.getItem('userName') || '',
+            room: roomId
         };
-        reader.readAsArrayBuffer(file);
+        console.log('文件消息:', messageData);
+    
+        try {
+            // 开始传输通知
+            const fileId = await new Promise<string>((resolve, reject) => {
+                socket?.emit('file_transfer_start', {
+                    fileName: file.name,
+                    fileSize: file.size,
+                    totalChunks,
+                    fileType: file.type,
+                    message: messageData
+                });
+    
+                socket?.once('file_transfer_init', (response) => {
+                    console.log('收到文件ID:', response.file_id);
+                    resolve(response.file_id);
+                });
+    
+                setTimeout(() => reject(new Error('File transfer init timeout')), 5000);
+            });
+    
+            console.log('开始发送文件分片, fileId:', fileId);
+    
+            // 分片读取并发送
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = await file.slice(start, end).arrayBuffer();
+                
+                console.log(`发送第 ${i + 1}/${totalChunks} 个分片`);
+    
+                socket?.emit('file_chunk', {
+                    fileId: fileId,  // 修改这里的键名
+                    chunkIndex: i,
+                    totalChunks,
+                    data: Array.from(new Uint8Array(chunk))
+                });
+    
+                // 等待服务器确认
+                await new Promise<void>((resolve, reject) => {
+                    socket?.once('chunk_received', (response) => {
+                        console.log(`分片 ${i + 1} 已确认`);
+                        resolve();
+                    });
+    
+                    setTimeout(() => reject(new Error('Chunk upload timeout')), 5000);
+                });
+            }
+        } catch (error) {
+            console.error('文件上传失败:', error);
+            message.error('文件上传失败，请重试');
+        }
     };
 
     return (
