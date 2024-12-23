@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, timedelta, datetime
 from extensions import db
 
 class User(db.Model):
@@ -8,7 +8,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    avatar = db.Column(db.String(255))
 
     def __init__(self, username, password, email=None):
         self.username = username

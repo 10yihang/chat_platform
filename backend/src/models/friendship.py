@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, timedelta, datetime
 from extensions import db
 
 class Friendship(db.Model):
@@ -8,7 +8,7 @@ class Friendship(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     friend_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.Enum('pending', 'accepted', 'blocked'), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     user = db.relationship('User', foreign_keys=[user_id], backref='friendships_initiated')
     friend = db.relationship('User', foreign_keys=[friend_id], backref='friendships_received')

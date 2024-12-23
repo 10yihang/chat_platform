@@ -4,7 +4,7 @@ import jwt
 from jwt import encode, decode
 from models.user import User
 from config import Config
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from extensions import db
 from websocket import socketio
 from models.group_member import GroupMember
@@ -125,8 +125,8 @@ class ChatService:
     def generate_token(user_id):
         payload = {
             'user_id': user_id,
-            'exp': datetime.now(timezone.utc) + timedelta(hours=24),  # 过期时间
-            'iat': datetime.now(timezone.utc),  # 签发时间
+            'exp': datetime.utcnow() + timedelta(hours=24),  # 过期时间
+            'iat': datetime.utcnow(),  # 签发时间
             'sub': str(user_id)  # JWT标准声明
         }
         token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
