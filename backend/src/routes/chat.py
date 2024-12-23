@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.chat import ChatService
 from models.message import Message
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 chat_bp = Blueprint('chat', __name__)
 chat_service = ChatService()
@@ -50,10 +51,11 @@ def receive_messages(user_id):
     return 200
 
 @chat_bp.route('/history', methods=['POST'])
+@jwt_required()
 def get_history():
     try:
+        user_id = get_jwt_identity()
         data = request.get_json()
-        user_id = data.get('userId')
         group_id = data.get('groupId')
         friend_id = data.get('friendId')
         

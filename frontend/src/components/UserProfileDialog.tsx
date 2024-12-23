@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, Avatar, Typography, Button, Box } from '@mui/material';
 import { UserProfileDialogProps } from '../types';
+import SocketProvider, { useSocketContext } from '../contexts/SocketContextProvider';
 
-
-const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onClose, userId, socket }) => {
+const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onClose, userId }) => {
   const [profile, setProfile] = useState<any>(null);
   const [isFriend, setIsFriend] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const currentUserId = parseInt(localStorage.getItem('userId') || '0');
+    const {socket, isConnected} = useSocketContext();
   
 
   useEffect(() => {

@@ -15,3 +15,4 @@ def join_group():
 def get_group(group_id):
     group = db.session.query(Group).filter(Group.id == group_id).first()
     return jsonify({'name': group.name}), 200
+

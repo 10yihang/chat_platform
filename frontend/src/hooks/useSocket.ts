@@ -2,52 +2,59 @@ import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { message } from 'antd';
 
-export const useSocket = (url: string): Socket | undefined => {
-  const socket = useRef<Socket>();
-  const [error, setError] = useState<boolean>(false);
-  
+export const useSocket = (url: string) => {
+  const socketRef = useRef<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     
-    if (!socket.current && !error) {
-      try {
-        socket.current = io(url, {
-          transports: ['websocket'],
-          upgrade: false,
-          forceNew: true,
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          timeout: 10000,
-          auth: { token },
-          rememberUpgrade: true,
-          transportOptions: {
-            polling: {
-              enabled: false
-            }
-          }
-        });
-
-        socket.current.on('connect_error', (err) => {
-          console.error('Socket connection error:', err);
-          message.error('网络连接失败，部分功能可能无法使用');
-          setError(true);
-        });
-
-      } catch (err) {
-        console.error('Socket initialization failed:', err);
-        message.error('网络连接失败，部分功能可能无法使用');
-        setError(true);
-      }
+    if (!token) {
+      console.log('No token found, skipping socket connection');
+      return;
     }
 
+    socketRef.current = io(url, {
+      transports: ['websocket'],
+      upgrade: false,
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+      forceNew: true
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected successfully', socketRef.current?.id);
+      setIsConnected(true);
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setIsConnected(false);
+      message.error('网络连接失败，请检查网络设置');
+    });
+
+    socketRef.current.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+
+    socketRef.current.connect();
+
     return () => {
-      if (socket.current) {
-        socket.current.disconnect();
-        socket.current = undefined;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsConnected(false);
       }
     };
-  }, [url, error]);
+  }, [url]);
 
-  return socket.current || undefined;
+  return { socket: socketRef.current, isConnected };
 };
