@@ -60,6 +60,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleGuestLogin = () => {
     if (username) {
+      localStorage.setItem('IsGuest', 'true');
       localStorage.setItem('guestName', username);
       onLogin(true);
     }

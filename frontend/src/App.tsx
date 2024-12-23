@@ -13,6 +13,9 @@ import FileSharing from './pages/FileSharing';
 import VideoCall from './components/VideoCall';
 import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
+import { useSocket } from './hooks/useSocket';
+import { Socket } from 'socket.io-client';
+import {message} from 'antd';
 
 declare global {
   var preUrl: string;
@@ -64,6 +67,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const socket = useSocket(global.socketUrl) as Socket;
 
   const handleLogin = (isGuestLogin?: boolean) => {
     setIsAuthenticated(true);
@@ -119,7 +123,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         ) : (
-          <Layout onLogout={handleLogout}>
+          <Layout onLogout={handleLogout} socket={socket}>
             <Routes>
               <Route path="/" element={<ChatApp />} />
               {!isGuest && (
