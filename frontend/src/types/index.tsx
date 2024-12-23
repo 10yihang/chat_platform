@@ -1,4 +1,3 @@
-import { Socket } from 'socket.io-client';
 
 export interface Message {
     id: number;
@@ -7,7 +6,7 @@ export interface Message {
     receiver_id: number;
     group_id: number;
     content: string;
-    type: 'text' | 'emoji' | 'file';
+    type: 'text' | 'emoji' | 'file' | 'voice';
     created_at: string;
     status: string;
     file_url?: string;
@@ -22,7 +21,7 @@ export interface ChatProps {
 }
 
 export interface ChatWindowProps {
-    channelId: string;
+    channelId?: string;
     chatName?: string;
     groupId?: string;
     friendId?: string;
@@ -30,13 +29,8 @@ export interface ChatWindowProps {
     avatar?: string;
 }
 
-export interface ChatListProps {
-    socket?: Socket;
-}
-
 export interface LayoutProps {
     children: React.ReactNode;
-    socket: Socket;
     onLogout?: () => void;
 };
 
@@ -47,7 +41,6 @@ export interface MediaPlayerProps {
 
 export interface NavigationProps {
     onLogout: () => void;
-    socket?: Socket;
 }
 
 export interface FriendRequestData {
@@ -63,5 +56,11 @@ export interface UserProfileDialogProps {
   open: boolean;
   onClose: () => void;
   userId: number;
-  socket?: Socket;
 }
+
+export interface ChatItem {
+    id: number;
+    name: string;
+    avatar?: string;
+    type: 'group' | 'friend';
+  }

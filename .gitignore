@@ -24,6 +24,7 @@ wheels/
 venv/
 ENV/
 test.py
+media.cpp
 
 # Flask
 instance/
