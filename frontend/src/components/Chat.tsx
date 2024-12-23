@@ -120,6 +120,9 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        
+        // 重置文件输入框，允许重复选择相同文件
+        event.target.value = '';
 
         const CHUNK_SIZE = 100 * 1024; // 100KB
         
@@ -127,66 +130,72 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
             message.error('文件大小不能超过20MB');
             return;
         }
-    
+
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         
-        // 创建文件消息
+        // 文件名编码处理
+        const fileName = encodeURIComponent(file.name);
+        
         const messageData = {
             sender_id: parseInt(localStorage.getItem('userId') || '0'),
             receiver_id: friendId ? parseInt(friendId) : 0,
             group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
-            content: file.name,
+            content: file.name, // 保持原始文件名显示
             type: 'file',
             sender_name: localStorage.getItem('userName') || '',
             room: roomId
         };
-        console.log('文件消息:', messageData);
-    
+
         try {
-            // 开始传输通知
             const fileId = await new Promise<string>((resolve, reject) => {
+                const initHandler = (response: any) => {
+                    console.log('收到文件ID:', response.file_id);
+                    resolve(response.file_id);
+                };
+
+                socket?.once('file_transfer_init', initHandler);
+
                 socket?.emit('file_transfer_start', {
-                    fileName: file.name,
+                    fileName: fileName,
                     fileSize: file.size,
                     totalChunks,
                     fileType: file.type,
                     message: messageData
                 });
-    
-                socket?.once('file_transfer_init', (response) => {
-                    console.log('收到文件ID:', response.file_id);
-                    resolve(response.file_id);
-                });
-    
-                setTimeout(() => reject(new Error('File transfer init timeout')), 5000);
+
+                const timeout = setTimeout(() => {
+                    socket?.off('file_transfer_init', initHandler);
+                    reject(new Error('File transfer init timeout'));
+                }, 5000);
             });
-    
-            console.log('开始发送文件分片, fileId:', fileId);
-    
-            // 分片读取并发送
+
             for (let i = 0; i < totalChunks; i++) {
                 const start = i * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, file.size);
                 const chunk = await file.slice(start, end).arrayBuffer();
-                
-                console.log(`发送第 ${i + 1}/${totalChunks} 个分片`);
-    
-                socket?.emit('file_chunk', {
-                    fileId: fileId,  // 修改这里的键名
-                    chunkIndex: i,
-                    totalChunks,
-                    data: Array.from(new Uint8Array(chunk))
-                });
-    
-                // 等待服务器确认
-                await new Promise<void>((resolve, reject) => {
-                    socket?.once('chunk_received', (response) => {
+
+                const chunkPromise = new Promise<void>((resolve, reject) => {
+                    const chunkHandler = () => {
                         console.log(`分片 ${i + 1} 已确认`);
                         resolve();
+                    };
+
+                    socket?.once('chunk_received', chunkHandler);
+
+                    socket?.emit('file_chunk', {
+                        fileId: fileId,
+                        chunkIndex: i,
+                        totalChunks,
+                        data: Array.from(new Uint8Array(chunk))
                     });
-    
-                    setTimeout(() => reject(new Error('Chunk upload timeout')), 5000);
+
+                    const timeout = setTimeout(() => {
+                        socket?.off('chunk_received', chunkHandler);
+                        reject(new Error('Chunk upload timeout'));
+                    }, 5000);
                 });
+
+                await chunkPromise;
             }
         } catch (error) {
             console.error('文件上传失败:', error);
