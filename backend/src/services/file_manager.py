@@ -1,6 +1,7 @@
 import os
 import time
 from config import Config
+from werkzeug.utils import secure_filename
 
 class FileUploadManager:
     def __init__(self):
@@ -9,10 +10,11 @@ class FileUploadManager:
 
     def init_file(self, file_name, total_chunks, file_type, message_data):
         # print(f"初始化文件: {file_name}, {total_chunks}, {file_type}, {message_data}")
+        decoded_name = secure_filename(file_name)
         file_id = f"{message_data['sender_id']}_{int(time.time())}_{file_name}"
         self.file_chunks[file_id] = [None] * total_chunks
         self.file_info[file_id] = {
-            'name': file_name,
+            'name': decoded_name,
             'type': file_type,
             'total_chunks': total_chunks,
             'received_chunks': 0,
