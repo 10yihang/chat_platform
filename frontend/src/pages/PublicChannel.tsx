@@ -4,7 +4,7 @@ import { useSocket } from '../hooks/useSocket';
 
 const PublicChannel: React.FC = () => {
 
-  return <ChatWindow channelId="public" socket={socket} />;
+  return <ChatWindow channelId="public"/>;
 };
 
 export default PublicChannel;

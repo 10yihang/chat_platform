@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -13,9 +13,8 @@ import FileSharing from './pages/FileSharing';
 import VideoCall from './components/VideoCall';
 import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
-import { useSocket } from './hooks/useSocket';
-import { Socket } from 'socket.io-client';
-import {message} from 'antd';
+import { message } from 'antd';
+import SocketProvider, { useSocketContext } from './contexts/SocketContextProvider';
 
 declare global {
   var preUrl: string;
@@ -67,7 +66,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const socket = useSocket(global.socketUrl) as Socket;
+
 
   const handleLogin = (isGuestLogin?: boolean) => {
     setIsAuthenticated(true);
@@ -82,6 +81,7 @@ const App: React.FC = () => {
 
   // 检查用户认证状态
   React.useEffect(() => {
+
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -95,17 +95,17 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 
   if (isLoading) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         <CircularProgress />
       </Box>
@@ -123,23 +123,28 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         ) : (
-          <Layout onLogout={handleLogout} socket={socket}>
-            <Routes>
-              <Route path="/" element={<ChatApp />} />
-              {!isGuest && (
-                <>
-                  <Route path="/chat/:id" element={<ChatApp />} />
-                  <Route path="/friends" element={<FriendList />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/files" element={<FileSharing />} />
-                  <Route path="/settings" element={<Settings />} />
-                </>
-              )}
-              <Route path="/channel" element={<PublicChannel />} />
-              <Route path="/video-call/:id" element={<VideoCall />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
+          <SocketProvider>
+            <Layout onLogout={handleLogout}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/chat" replace />} />
+                <Route path="/chat" element={<ChatApp />} />
+                <Route path="/chat/group/:id" element={<ChatApp />} />
+                <Route path="/chat/friend/:id" element={<ChatApp />} />
+                {!isGuest && (
+                  <>
+                    <Route path="/chat/:id" element={<ChatApp />} />
+                    <Route path="/friends" element={<FriendList />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/files" element={<FileSharing />} />
+                    <Route path="/settings" element={<Settings />} />
+                  </>
+                )}
+                <Route path="/channel" element={<PublicChannel />} />
+                <Route path="/video-call/:id" element={<VideoCall />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </SocketProvider>
         )}
       </Router>
     </ThemeProvider>
