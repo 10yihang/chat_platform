@@ -1,33 +1,33 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, AppBar, Toolbar, Typography, Container } from '@mui/material';
 import Navigation from './Navigation';
+import { LayoutProps } from '../types';
+import {StyledRoot, StyledMain} from '../styles';
 
-const StyledRoot = styled('div')({
-  display: 'flex',
-  minHeight: '100vh',
-});
+const Layout: React.FC<LayoutProps> = ({ children, onLogout = () => {}, socket }) => {
+  useEffect(() => {
+    const checkSocket = async () => {
+      if (socket) {
+        socket.on('message', (data: any) => {
+          console.log('Layout收到消息:', data);
+        });
+      }
+  
+      return () => {
+        if (socket) {
+          socket.off('message');
+        }
+      };
+    };
+  })
 
-const StyledMain = styled('div')({
-  flexGrow: 1,
-  overflow: 'auto',
-  minHeight: '100vh',
-  paddingTop: 64,
-  paddingBottom: 24,
-});
 
-interface LayoutProps {
-  children: React.ReactNode;
-  onLogout?: () => void;
-}
-
-const Layout: React.FC<LayoutProps> = ({ children, onLogout = () => {} }) => {
   return (
     <StyledRoot>
       <AppBar position="fixed">
         <Toolbar>
-          <Typography variant="h6">聊天室</Typography>
-          <Navigation onLogout={onLogout} />
+          <Navigation onLogout={onLogout} socket={socket} />
         </Toolbar>
       </AppBar>
       <StyledMain>
