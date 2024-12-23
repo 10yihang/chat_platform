@@ -10,11 +10,16 @@ from extensions import db
 from websocket import socketio
 from models.group_member import GroupMember
 from flask_socketio import emit, join_room, leave_room
+from services.file_manager import FileUploadManager
+from models.message import Message
+from extensions import socketio
+from flask_socketio import emit
 
 class ChatService:
 
     def __init__(self):
         self.setup_socket_handlers()
+        self.file_manager = FileUploadManager()
         
     def setup_socket_handlers(self):
         @socketio.on('chat')
@@ -26,7 +31,6 @@ class ChatService:
                     
                 handlers = {
                     'text': self.handle_text_message,
-                    'file': self.handle_file_message,
                     'emoji': self.handle_emoji_message
                 }
                 
@@ -40,10 +44,72 @@ class ChatService:
                 print(f"处理消息错误: {str(e)}")
                 emit('error', {'msg': str(e)})
                 return False
+
+        @socketio.on('file_transfer_start')
+        def handle_file_start(data):
+            try:
+                print(f"data[message]: {data['message']}")
+                file_id = self.file_manager.init_file(
+                    data['fileName'],
+                    data['totalChunks'],
+                    data['fileType'],
+                    data['message']
+                )
+                # print(f"初始化文件传输: {file_id}")
+                emit('file_transfer_init', {'file_id': file_id})
+            except Exception as e:
+                print(f"初始化文件传输失败: {str(e)}")
+                emit('error', {'msg': str(e)})
+
+        @socketio.on('file_chunk')
+        def handle_file_chunk(data):
+            try:
+                # print(f"接收文件分片: {data}")
+                if self.file_manager.add_chunk(data['fileId'], data['chunkIndex'], data['data']):
+                    file_url = self.file_manager.save_file(data['fileId'])
+                    if file_url:
+                        file_info = self.file_manager.file_info.get(data['fileId'])
+                        # print('file info: ',self.file_manager.file_info)
+                        if not file_info:
+                            raise ValueError(f"找不到文件信息: {data['fileId']}")
+                            
+                        message_data = file_info['message_data']
+                        new_message = Message(
+                            sender_id=message_data['sender_id'],
+                            receiver_id=message_data['receiver_id'],
+                            group_id=message_data['group_id'],
+                            content=message_data['content'],
+                            type='file',
+                            sender_name=message_data['sender_name'],
+                            file_url=file_url
+                        )
+                        new_message.save()
+                        
+                        emit('message', {
+                            'id': new_message.id,
+                            'sender_id': new_message.sender_id,
+                            'receiver_id': new_message.receiver_id,
+                            'group_id': new_message.group_id,
+                            'content': new_message.content,
+                            'type': 'file',
+                            'sender_name': new_message.sender_name,
+                            'created_at': new_message.created_at.isoformat(),
+                            'file_url': file_url
+                        }, room=message_data['room'])
+
+                emit('chunk_received', {'index': data['chunkIndex']})
+            except Exception as e:
+                print(f"处理文件分片失败: {str(e)}")
+                emit('error', {'msg': str(e)})
             
     def handle_text_message(self, data):
         try:
             message = data.get('message')
+            room = data.get('room')
+            
+            if not room:
+                raise ValueError("房间ID不能为空")
+                
             sender = User.query.get(message['sender_id'])
             
             new_message = Message(
@@ -57,12 +123,13 @@ class ChatService:
             
             new_message.save()
             
+            # 确保消息只发送到指定房间
             emit('message', {
                 **message,
                 'id': new_message.id,
                 'sender_name': sender.username,
                 'created_at': new_message.created_at.isoformat()
-            }, room=data.get('room'))
+            }, room=room)
             
             return True
         except Exception as e:
@@ -70,69 +137,67 @@ class ChatService:
             emit('error', {'msg': str(e)})
             return False
     
-    def handle_file_message(self, data):
-        try:
-            UPLOAD_FOLDER = Config.UPLOAD_FOLDER
+    # def handle_file_message(self, data):
+    #     try:
+    #         UPLOAD_FOLDER = Config.UPLOAD_FOLDER
 
-            message = data.get('message', {})
-            file_data = data.get('file')
+    #         message = data.get('message', {})
+    #         file_data = data.get('file')
             
-            if not file_data or not isinstance(file_data, dict):
-                raise Exception('未提供文件或文件格式错误')
+    #         if not file_data or not isinstance(file_data, dict):
+    #             raise Exception('未提供文件或文件格式错误')
                 
-            sender = User.query.get(message.get('sender_id'))
-            if not sender:
-                raise Exception('发送者不存在')
+    #         sender = User.query.get(message.get('sender_id'))
+    #         if not sender:
+    #             raise Exception('发送者不存在')
 
-            # 生成唯一文件名
-            filename = secure_filename(file_data.get('name', ''))
-            unique_filename = f'{sender.id}_{int(time.time())}_{filename}'
+    #         # 生成唯一文件名
+    #         filename = secure_filename(file_data.get('name', ''))
+    #         unique_filename = f'{sender.id}_{int(time.time())}_{filename}'
 
-            # 确保上传目录存在
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
+    #         # 确保上传目录存在
+    #         if not os.path.exists(UPLOAD_FOLDER):
+    #             os.makedirs(UPLOAD_FOLDER)
 
-            # 保存文件
-            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-            with open(file_path, 'wb') as f:
-                binary_data = bytes(file_data.get('data', []))
-                f.write(binary_data)
+    #         # 保存文件
+    #         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+    #         with open(file_path, 'wb') as f:
+    #             binary_data = bytes(file_data.get('data', []))
+    #             f.write(binary_data)
 
-            # 生成文件URL
-            file_url = f'/uploads/{unique_filename}'
+    #         file_url = f'/uploads/{unique_filename}'
 
-            # 创建消息记录
-            new_message = Message(
-                sender_id=message.get('sender_id'),
-                receiver_id=message.get('receiver_id', 0),
-                group_id=message.get('group_id', 0),
-                content=message.get('content'),
-                type='file',
-                sender_name=sender.username,
-                file_url=file_url
-            )
+    #         new_message = Message(
+    #             sender_id=message.get('sender_id'),
+    #             receiver_id=message.get('receiver_id', 0),
+    #             group_id=message.get('group_id', 0),
+    #             content=message.get('content'),
+    #             type='file',
+    #             sender_name=sender.username,
+    #             file_url=file_url
+    #         )
             
-            new_message.save()
+    #         new_message.save()
             
-            # 发送消息通知
-            emit('file_uploaded', {
-                'id': new_message.id,
-                'sender_id': new_message.sender_id,
-                'receiver_id': new_message.receiver_id,
-                'group_id': new_message.group_id,
-                'content': new_message.content,
-                'type': 'file',
-                'sender_name': sender.username,
-                'created_at': new_message.created_at.isoformat(),
-                'file_url': file_url
-            }, room=message.get('room'))
+    #         # 发送消息通知
+    #         emit('message', {
+    #             'id': new_message.id,
+    #             'sender_id': new_message.sender_id,
+    #             'receiver_id': new_message.receiver_id,
+    #             'group_id': new_message.group_id,
+    #             'content': new_message.content,
+    #             'type': 'file',
+    #             'sender_name': sender.username,
+    #             'created_at': new_message.created_at.isoformat(),
+    #             'file_url': file_url
+    #         }, room=message.get('room'))
             
-            return True
+    #         return True
             
-        except Exception as e:
-            print(f"处理文件错误: {str(e)}")
-            emit('error', {'msg': str(e)})
-            return False
+    #     except Exception as e:
+    #         print(f"处理文件错误: {str(e)}")
+    #         emit('error', {'msg': str(e)})
+    #         return False
         
     def handle_emoji_message(self, data):
         return self.handle_message(data)
@@ -188,9 +253,9 @@ class ChatService:
     def generate_token(user_id):
         payload = {
             'user_id': user_id,
-            'exp': datetime.utcnow() + timedelta(hours=24),  # 过期时间
-            'iat': datetime.utcnow(),  # 签发时间
-            'sub': str(user_id)  # JWT标准声明
+            'exp': datetime.utcnow() + timedelta(hours=24), 
+            'iat': datetime.utcnow(),  
+            'sub': str(user_id)  
         }
         token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
         try:

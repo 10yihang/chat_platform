@@ -10,6 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     avatar = db.Column(db.String(255))
+    status = db.Column(db.String(20), default='offline')
 
     def __init__(self, username, password, email=None):
         self.username = username
