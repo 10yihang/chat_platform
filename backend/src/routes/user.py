@@ -53,3 +53,10 @@ def get_user_groups():
         'avatar': g.group.avatar,
         'type': 'group'
     } for g in groups]), 200
+
+@user_bp.route('/status', methods=['GET'])
+@jwt_required()
+def get_user_status():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return jsonify({'status': user.status}), 200

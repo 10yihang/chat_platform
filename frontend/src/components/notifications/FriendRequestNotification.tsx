@@ -1,21 +1,29 @@
 import React from 'react';
 import { Box, Typography, Button, Avatar } from '@mui/material';
+import { useSocketContext } from '../../contexts/SocketContextProvider';
+import {FriendRequestData} from '../../types';
 
-interface FriendRequestNotificationProps {
-  sender: {
-    id: number;
-    username: string;
-    avatar?: string;
-  };
-  onAccept: () => void;
-  onReject: () => void;
-}
 
-const FriendRequestNotification: React.FC<FriendRequestNotificationProps> = ({
-  sender,
-  onAccept,
-  onReject
+const FriendRequestNotification: React.FC<FriendRequestData> = ({
+  request_id, sender, onClose
 }) => {
+  const {socket, isConnected} = useSocketContext();
+
+  const friend_request_response = async (status: string) => {
+    try{
+      if (socket) {
+        socket?.emit('friend_request_response', {
+          request_id: request_id,
+          status: status
+        });
+        
+        onClose();
+      }
+    } catch (error) {
+      console.error('处理好友请求失败:', error);
+    }
+  };
+  
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -33,7 +41,7 @@ const FriendRequestNotification: React.FC<FriendRequestNotificationProps> = ({
         <Button 
           variant="contained" 
           size="small" 
-          onClick={onAccept}
+          onClick={() => friend_request_response('accepted')}
           color="primary"
         >
           接受
@@ -41,7 +49,7 @@ const FriendRequestNotification: React.FC<FriendRequestNotificationProps> = ({
         <Button 
           variant="outlined" 
           size="small" 
-          onClick={onReject}
+          onClick={() => friend_request_response('rejected')}
           color="error"
         >
           拒绝

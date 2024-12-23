@@ -13,7 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { useSocketContext } from '../contexts/SocketContextProvider';
-import {ChatItem} from '../types';
+import {ChatItem, FriendRequestAcceptedData} from '../types';
 import {OnlineBadge} from '../styles';
 
 const ChatList: React.FC = () => {
@@ -70,6 +70,30 @@ const ChatList: React.FC = () => {
       socket.on('user_offline', (userId: number) => {
         setOnlineUsers(prev => prev.filter(id => id !== userId));
       });
+
+      socket.on('friend_request_accepted', (data: FriendRequestAcceptedData) => {
+        const currentUserId = parseInt(localStorage.getItem('userId') || '0');
+        const newFriend = data.sender.id === currentUserId ? data.receiver : data.sender;
+        
+        setChatItems(prev => {
+          const exists = prev.some(item => 
+            item.type === 'friend' && item.id === newFriend.id
+          );
+          if (exists) return prev;
+          
+          return [...prev, {
+            id: newFriend.id,
+            name: newFriend.username,
+            avatar: newFriend.avatar,
+            type: 'friend'
+          }];
+        });
+      
+        if (newFriend.status === 'online') {
+          setOnlineUsers(prev => [...prev, newFriend.id]);
+        }
+      });
+
     }
 
     return () => {
@@ -77,6 +101,7 @@ const ChatList: React.FC = () => {
         socket.off('online_status_update');
         socket.off('user_online');
         socket.off('user_offline');
+        socket.off('friend_request_accepted');
       }
     };
   }, [socket]);

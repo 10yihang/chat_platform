@@ -7,6 +7,7 @@ from routes.chat import chat_bp
 from routes.user import user_bp
 from routes.group import group_bp
 from routes.profile import profile_bp
+from routes.file import file_bp
 from routes.friend_request import friend_request_bp
 from config import Config
 from dotenv import load_dotenv
@@ -57,6 +58,7 @@ def create_app():
     app.register_blueprint(group_bp, url_prefix='/api/group')
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
     app.register_blueprint(friend_request_bp, url_prefix='/api/friend')
+    app.register_blueprint(file_bp, url_prefix='/api/file')
     
     return app
 
