@@ -5,10 +5,12 @@ import json
 # 存储所有连接的clients
 connected_clients = set()
 
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     """处理客户端连接"""
     # 添加新连接到集合
     connected_clients.add(websocket)
+    print(f"New client connected. Total clients: {len(connected_clients)}")
+    
     try:
         while True:
             # 等待接收消息
@@ -35,22 +37,23 @@ async def handle_client(websocket, path):
                     }))
                     
             except json.JSONDecodeError:
-                # 如果不是JSON格式，直接回显
-                await websocket.send(f"Echo: {message}")
+                await websocket.send(json.dumps({
+                    'status': 'error',
+                    'message': 'Invalid JSON format'
+                }))
                 
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
     finally:
-        # 移除断开的连接
         connected_clients.remove(websocket)
+        print(f"Client removed. Total clients: {len(connected_clients)}")
 
 async def main():
-    # 启动WebSocket服务器
     server = await websockets.serve(
         handle_client,
         "localhost",
         8765,
-        ping_interval=None  # 禁用自动ping以保持长连接
+        ping_interval=None
     )
     print("WebSocket server started on ws://localhost:8765")
     await server.wait_closed()

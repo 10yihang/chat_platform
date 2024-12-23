@@ -1,9 +1,5 @@
 import React, { useRef, useState } from 'react';
-
-interface MediaPlayerProps {
-  src: string;
-  type: 'audio' | 'video';
-}
+import {MediaPlayerProps} from '../types';
 
 const MediaPlayer: React.FC<MediaPlayerProps> = ({ src, type }) => {
   const audioRef = useRef<HTMLAudioElement>(null);

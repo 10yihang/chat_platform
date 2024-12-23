@@ -10,4 +10,4 @@ class Profile(db.Model):
     bio = db.Column(db.Text)
     location = db.Column(db.String(100))
     phone = db.Column(db.String(20))
-    updated_at = db.Column(db.DateTime, default=datetime.now())
+    updated_at = db.Column(db.DateTime, default=datetime.now)
