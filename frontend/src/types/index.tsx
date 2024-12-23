@@ -12,6 +12,13 @@ export interface Message {
     file_url?: string;
 }
 
+export interface MessageBubbleProps {
+    message: Message;
+    isown: boolean;
+    avatar?: string;
+    onAvatarClick?: () => void;
+  }
+
 export interface ChatProps {
     channelId?: string;
     groupId?: string;
@@ -50,7 +57,23 @@ export interface FriendRequestData {
         username: string;
         avatar?: string;
     };
+    onClose(): any;
 }
+
+export interface FriendRequestAcceptedData {
+    sender: {
+      id: number;
+      username: string;
+      avatar: string;
+      status: string;
+    };
+    receiver: {
+      id: number;
+      username: string;
+      avatar: string;
+      status: string;
+    };
+  }
 
 export interface UserProfileDialogProps {
   open: boolean;

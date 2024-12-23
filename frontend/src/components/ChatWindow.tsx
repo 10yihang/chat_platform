@@ -7,6 +7,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, u
   const [title, setTitle] = useState<string>('');
 
   useEffect(() => {
+    
     const fetchChatInfo = async () => {
       try {
         if (groupId) {
