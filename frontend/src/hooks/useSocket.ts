@@ -1,42 +1,53 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { message } from 'antd';
 
-export const useSocket = (url: string) => {
+export const useSocket = (url: string): Socket | undefined => {
   const socket = useRef<Socket>();
-
+  const [error, setError] = useState<boolean>(false);
+  
   useEffect(() => {
     const token = localStorage.getItem('token');
-    console.log('token:', token);
     
-    socket.current = io(url, {
-      auth: {
-        token: token
-      },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-      autoConnect: true,
-      withCredentials: true
-    });
+    if (!socket.current && !error) {
+      try {
+        socket.current = io(url, {
+          transports: ['websocket'],
+          upgrade: false,
+          forceNew: true,
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 10000,
+          auth: { token },
+          rememberUpgrade: true,
+          transportOptions: {
+            polling: {
+              enabled: false
+            }
+          }
+        });
 
-    socket.current.on('connect', () => {
-      console.log('WebSocket连接成功!');
-    });
+        socket.current.on('connect_error', (err) => {
+          console.error('Socket connection error:', err);
+          message.error('网络连接失败，部分功能可能无法使用');
+          setError(true);
+        });
 
-    socket.current.on('error', (error: any) => {
-      console.error('Socket错误:', error);
-    });
-
-    socket.current.on('connect_error', (error: any) => {
-      console.error('连接错误:', error);
-    });
+      } catch (err) {
+        console.error('Socket initialization failed:', err);
+        message.error('网络连接失败，部分功能可能无法使用');
+        setError(true);
+      }
+    }
 
     return () => {
-      socket.current?.disconnect();
+      if (socket.current) {
+        socket.current.disconnect();
+        socket.current = undefined;
+      }
     };
-  }, [url]);
+  }, [url, error]);
 
-  return socket.current;
+  return socket.current || undefined;
 };

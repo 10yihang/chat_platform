@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, timedelta, datetime
 from extensions import db
 
 class Group(db.Model):
@@ -10,6 +10,5 @@ class Group(db.Model):
     avatar = db.Column(db.String(255))
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     type = db.Column(db.Enum('public', 'private'), default='private')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
-    

@@ -20,13 +20,13 @@ const ChatApp: React.FC = () => {
         borderColor: 'divider',
         overflow: 'auto'
       }}>
-        <ChatList />
+        <ChatList socket={socket} />
       </Box>
       <Box sx={{ 
         flex: 1,
         overflow: 'hidden'
       }}>
-        <ChatWindow channelId={channelId} />
+        <ChatWindow channelId={channelId} socket={socket} />
       </Box>
     </Box>
   );

@@ -11,7 +11,7 @@ class Message(db.Model):
     group_id = db.Column(db.Integer, nullable = True)
     content = db.Column(db.Text, nullable=False)
     type = db.Column(db.String(20), default='text')
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    created_at = db.Column(db.DateTime, default=datetime.now)
     status = db.Column(db.String(20), default='sent')
     file_url = db.Column(db.String(255))
 
@@ -39,7 +39,7 @@ class Message(db.Model):
             'group_id': self.group_id,
             'content': self.content,
             'type': self.type,
-            'created_at': self.created_at,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'status': self.status,
             'file_url': self.file_url,
             'sender_name': self.sender_name

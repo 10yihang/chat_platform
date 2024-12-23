@@ -25,6 +25,19 @@ def get_profile():
         'phone': profile.phone if profile else None
     })
 
+@profile_bp.route('/profile/<int:user_id>', methods=['GET'])
+def get_public_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    profile = Profile.query.filter_by(user_id=user_id).first()
+    
+    return jsonify({
+        'username': user.username,
+        'avatar': profile.avatar if profile else None,
+        'bio': profile.bio if profile else None,
+        'location': profile.location if profile else None,
+        'phone': profile.phone if profile else None
+    })
+
 @profile_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():

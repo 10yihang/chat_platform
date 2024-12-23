@@ -1,129 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, TextField, Button, Paper, IconButton, Typography, Avatar } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import { styled } from '@mui/material/styles';
-import { useSocket } from '../hooks/useSocket';
-
-interface Message {
-    id: number;
-    sender_id: number;
-    sender_name?: string; 
-    receiver_id: number;
-    group_id: number;
-    content: string;
-    type: 'text' | 'emoji' | 'file';
-    created_at: string;
-    status: string;
-    file_url?: string;
-}
-
-interface ChatProps {
-    channelId?: string;
-    groupId?: string;
-    friendId?: string;
-    userName?: string;
-    avatar?: string;
-}
-
-const ChatContainer = styled(Box)({
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f0f2f5',
-    position: 'relative'
-});
-
-const MessagesContainer = styled(Box)({
-    flex: 1,
-    overflowY: 'auto',
-    padding: '20px',
-    maxWidth: '900px',
-    margin: '0 auto',
-    width: '100%'
-});
-
-const InputContainer = styled(Box)({
-    position: 'sticky',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: '12px 20px',
-    backgroundColor: '#fff',
-    borderTop: '1px solid rgba(0, 0, 0, 0.12)',
-    zIndex: 1000,
-    maxWidth: '900px',
-    margin: '0 auto',
-    width: '100%'
-});
-
-const MessageWrapper = styled(Box)<{ isOwn: boolean }>(({ isOwn }) => ({
-    display: 'flex',
-    alignItems: 'flex-start',
-    marginBottom: '12px',
-    flexDirection: isOwn ? 'row-reverse' : 'row',
-    gap: '8px',
-    width: '100%',
-    padding: '0 20px'
-}));
-
-
-
-const MessageBubble = styled(Paper)<{ isOwn: boolean }>(({ isOwn, theme }) => ({
-    padding: theme.spacing(1.5),
-    borderRadius: '12px',
-    minWidth: '120px',
-    width: 'fit-content',  // 根据内容自适应宽度
-    wordBreak: 'break-word',
-    whiteSpace: 'pre-wrap',
-    backgroundColor: isOwn ? '#dcf8c6' : '#fff',
-    boxShadow: '0 1px 1px rgba(0,0,0,0.1)'
-}));
-
-const MessageTime = styled(Typography)({
-    fontSize: '0.75rem',
-    color: '#667781',
-    marginTop: '4px',
-    textAlign: 'right'
-});
-
-const UserAvatar = styled(Avatar)({
-    width: 40,
-    height: 40
-});
-
-const UserName = styled(Typography)({
-    fontSize: '0.8rem',
-    color: '#667781',
-    marginBottom: '4px'
-});
-
-const MessageContent = styled(Typography)({
-    fontSize: '0.9rem',
-    lineHeight: 1.4,
-    whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
-    flex: '0 1 auto'
-});
+import UserProfileDialog from './UserProfileDialog';
+import MessageBubble from './MessageBubble';
+import { Message, ChatProps } from '../types';
+import {ChatContainer, MessagesContainer, InputContainer} from '../styles';
 
 const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<null | HTMLDivElement>(null);
     const fileInputRef = useRef<null | HTMLInputElement>(null);
-    const socket = useSocket(global.socketUrl);
     const roomId = channelId === 'public' ? 'group_1' : `group_${groupId}` || `friend_${friendId}`;
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+    const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+
+    const handleAvatarClick = (userId: number) => {
+        setSelectedUserId(userId);
+        setProfileDialogOpen(true);
     };
 
-    // useEffect(() => {
-    //     fetchMessages();
-    //     const interval = setInterval(fetchMessages, 3000);
-    //     return () => clearInterval(interval);
-    // }, []);
+    const scrollToBottom = useCallback(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
@@ -174,14 +79,15 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
             socket.on('message', (newMsg: Message) => {
                 console.log('收到新消息:', newMsg);
                 setMessages(prev => {
-                    // 检查消息是否已存在
                     const exists = prev.some(msg => msg.id === newMsg.id);
                     if (exists) {
                         return prev;
                     }
-                    return [...prev, newMsg];
+                    const newMessages = [...prev, newMsg];
+                    // 使用 setTimeout 确保 DOM 已更新
+                    setTimeout(scrollToBottom, 100);
+                    return newMessages;
                 });
-                scrollToBottom();
             });
 
             socket.on('error', (error: any) => {
@@ -193,24 +99,12 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
                 socket.off('error');
             };
         }
-    }, [socket]);
-
-    // const fetchMessages = async () => {
-    //     // try {
-    //     //   const userId = localStorage.getItem('userId');
-    //     //   const response = await fetch(`${global.preUrl}/api/chat/receive/${userId}`);
-    //     //   const data = await response.json();
-    //     //   setMessages(data);
-    //     // } catch (error) {
-    //     //   console.error('获取消息失败:', error);
-    //     // }
-    // };
+    }, [socket, scrollToBottom]);
 
     const handleSend = async () => {
         if (!newMessage.trim()) return;
-        console.log(localStorage.getItem('userId'));
 
-        if (!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined') {
+        if ((!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined') && localStorage.getItem('IsGuest') !== 'true') {
             alert('请先登录');
             return;
         }
@@ -273,31 +167,24 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, userName, ava
     return (
         <ChatContainer>
             <MessagesContainer>
-                {messages.map((message, index) => {
-                    const isOwn = message.sender_id.toString() === localStorage.getItem('userId');
-                    return (
-                        <MessageWrapper key={`${message.id}_${index}`} isOwn={isOwn}>
-                            <UserAvatar src={avatar} />
-                            <MessageContent>
-                                {!isOwn && (
-                                    <UserName>
-                                        {message.sender_name || '用户'}
-                                    </UserName>
-                                )}
-                                <MessageBubble isOwn={isOwn}>
-                                    <MessageContent>
-                                        {message.content}
-                                    </MessageContent>
-                                    <MessageTime>
-                                        {new Date(message.created_at).toLocaleTimeString()}
-                                    </MessageTime>
-                                </MessageBubble>
-                            </MessageContent>
-                        </MessageWrapper>
-                    );
-                })}
-                <div ref={messagesEndRef} />
+                {messages.map((message, index) => (
+                    <MessageBubble
+                        key={`${message.id}_${index}`}
+                        message={message}
+                        isown={message.sender_id.toString() === localStorage.getItem('userId')}
+                        avatar={avatar}
+                        onAvatarClick={() => handleAvatarClick(message.sender_id)}
+                    />
+                ))}
+                <div ref={messagesEndRef} style={{ height: 0 }} /> {/* 添加高度为0的占位元素 */}
             </MessagesContainer>
+
+            <UserProfileDialog
+                open={profileDialogOpen}
+                onClose={() => setProfileDialogOpen(false)}
+                userId={selectedUserId || 0}
+                socket={socket}
+            />
 
             <InputContainer>
                 <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>

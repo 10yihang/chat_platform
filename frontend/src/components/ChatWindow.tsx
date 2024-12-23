@@ -1,15 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Paper, InputBase, IconButton, Stack } from '@mui/material';
 import Chat from './Chat';
-
-interface ChatWindowProps {
-  channelId: string;
-  chatName?: string;
-  groupId?: string;
-  friendId?: string;
-  userName?: string;
-  avatar?: string;
-}
+import { ChatWindowProps } from '../types';
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
   const [title, setTitle] = useState<string>('');

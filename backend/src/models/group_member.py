@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, timedelta, datetime
 from extensions import db
 
 class GroupMember(db.Model):
@@ -15,7 +15,7 @@ class GroupMember(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     role = db.Column(db.Enum('admin', 'member'), default='member')
     nickname = db.Column(db.String(50))
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=datetime.now)
 
     group = db.relationship('Group', backref='members')
     user = db.relationship('User', backref='group_memberships')
