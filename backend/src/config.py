@@ -20,3 +20,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    SSL_CERT = 'cert.pem'
+    SSL_KEY = 'key.pem'
+    PREFERRED_URL_SCHEME = 'https'
