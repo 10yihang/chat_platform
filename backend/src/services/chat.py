@@ -48,7 +48,8 @@ class ChatService:
         @socketio.on('file_transfer_start')
         def handle_file_start(data):
             try:
-                print(f"data[message]: {data['message']}")
+                # print(f"data[message]: {data['message']}")
+                print('fileName: ', data['fileName'])
                 file_id = self.file_manager.init_file(
                     data['fileName'],
                     data['totalChunks'],
@@ -96,6 +97,8 @@ class ChatService:
                             'created_at': new_message.created_at.isoformat(),
                             'file_url': file_url
                         }, room=message_data['room'])
+                    else:
+                        raise ValueError("文件保存失败，没有文件URL")
 
                 emit('chunk_received', {'index': data['chunkIndex']})
             except Exception as e:
