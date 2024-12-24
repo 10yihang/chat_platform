@@ -1,49 +1,79 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import { IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import CallEndIcon from '@mui/icons-material/CallEnd';
+import { useSocketContext } from '../contexts/SocketContextProvider';
 
-const VideoCall: React.FC = () => {
-    const localVideoRef = useRef<HTMLVideoElement>(null);
-    const remoteVideoRef = useRef<HTMLVideoElement>(null);
-    const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+interface VideoCallProps {
+  friendId?: string;
+  groupId?: string;
+  userName?: string;
+}
 
-    useEffect(() => {
-        const initVideoCall = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-            }
+const VideoCall: React.FC<VideoCallProps> = ({friendId, userName, groupId }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isConnected, setIsConnected] = React.useState(false);
+  const localVideoRef = React.useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
+  const peerConnection = React.useRef<RTCPeerConnection | null>(null);
+  const { socket } = useSocketContext();
 
-            peerConnectionRef.current = new RTCPeerConnection();
-            stream.getTracks().forEach(track => {
-                peerConnectionRef.current?.addTrack(track, stream);
-            });
+  const handleCall = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideoRef.current!.srcObject = stream;
+      setIsOpen(true);
+      
+      socket?.emit('call_request', { 
+        target_id: friendId,
+        caller_name: userName,
+        type: 'video' 
+      });
+    } catch (error) {
+      console.error('获取视频失败:', error);
+    }
+  };
 
-            peerConnectionRef.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                    // Send the candidate to the remote peer
-                }
-            };
+  return (
+    <>
+      <IconButton onClick={handleCall}>
+        <VideocamIcon />
+      </IconButton>
 
-            peerConnectionRef.current.ontrack = (event) => {
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = event.streams[0];
-                }
-            };
-        };
-
-        initVideoCall();
-
-        return () => {
-            peerConnectionRef.current?.close();
-        };
-    }, []);
-
-    return (
-        <div>
-            <h2>视频通话</h2>
-            <video ref={localVideoRef} autoPlay muted />
-            <video ref={remoteVideoRef} autoPlay />
-        </div>
-    );
+      <Dialog 
+        open={isOpen} 
+        onClose={() => setIsOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>视频通话</DialogTitle>
+        <DialogContent>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <video 
+              ref={localVideoRef} 
+              autoPlay 
+              muted 
+              style={{ width: '50%', backgroundColor: '#000' }} 
+            />
+            <video 
+              ref={remoteVideoRef} 
+              autoPlay 
+              style={{ width: '50%', backgroundColor: '#000' }} 
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setIsOpen(false)} 
+            color="error" 
+            startIcon={<CallEndIcon />}
+          >
+            结束通话
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 };
 
 export default VideoCall;
