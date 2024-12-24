@@ -21,7 +21,7 @@ declare global {
   var socketUrl: string;
 }
 
-global.preUrl = 'http://10.255.253.3:5000';
+global.preUrl = 'https://10.255.253.3:5000';
 global.socketUrl = 'ws://10.255.253.3:5000';
 
 const theme = createTheme({
