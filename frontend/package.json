@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.2.0",
@@ -15,6 +16,7 @@
     "antd": "^5.22.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-draggable": "^4.4.6",
     "react-router-dom": "^7.0.2",
     "react-scripts": "5.0.1",
     "scheduler": "^0.25.0",
@@ -22,9 +24,9 @@
     "typescript": "^4.9.5"
   },
   "scripts": {
-    "start": "set PORT=8000 && react-scripts start --host 0.0.0.0",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "set PORT=8000 && craco start --host 0.0.0.0",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "browserslist": {
