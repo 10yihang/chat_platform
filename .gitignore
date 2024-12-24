@@ -64,3 +64,11 @@ uploads/*
 *.log
 log/
 logs/
+
+cert.pem
+key.pem
+
+# SSL证书
+*.pem
+*.key
+*.crt
