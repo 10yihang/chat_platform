@@ -33,7 +33,6 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
       });
 
       socket.on('friend_request_response', (data) => {
-        // 移除相关的好友请求通知
         setNotifications(prev => 
           prev.filter(n => 
             !(n.type === 'friend_request' && n.data.request_id === data.request_id)

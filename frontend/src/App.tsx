@@ -140,7 +140,7 @@ const App: React.FC = () => {
                   </>
                 )}
                 <Route path="/channel" element={<PublicChannel />} />
-                <Route path="/video-call/:id" element={<VideoCall />} />
+                {/* <Route path="/video-call/:id" element={<VideoCall />} /> */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
