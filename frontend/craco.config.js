@@ -2,7 +2,11 @@ const { whenProd, getPlugin, pluginByName } = require('@craco/craco');
 
 module.exports = {
     devServer: {
-        https: true,
+        hot: true,
+        https: {
+            key: '../backend/chat.yihang01.cn.key',
+            cert: '../backend/chat.yihang01.cn_bundle.crt',
+        },
         setupMiddlewares: (middlewares, devServer) => {
             if (!devServer) {
               throw new Error('webpack-dev-server is not defined');

@@ -63,47 +63,81 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
 
   const handleCall = async () => {
     try {
+      if (!friendId || !userName) {
+        message.error('无法发起通话：缺少必要信息');
+        return;
+      }
+
       const hasPermission = await checkAudioPermission();
       if (!hasPermission) {
         message.error('请允许访问麦克风');
         return;
       }
 
+      // 立即设置状态，确保组件显示
       setIsOpen(true);
       setIsEnded(false);
-      
+      setIsCaller(true);
+      setIsConnected(false);
+
+      // 先清理之前的状态
+      await handleEndCall();
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStream.current = stream;
-      
+
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = stream;
       }
-      
+
       const pc = createPeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      socket?.emit('call_request', {
-        target_id: friendId,
-        caller_name: userName,
-        type: 'voice',
-        sdp: offer
+      stream.getTracks().forEach(track => {
+        if (pc && stream) {
+          pc.addTrack(track, stream);
+        }
       });
 
-      setIsCaller(true);
+      try {
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: false
+        });
+        await pc.setLocalDescription(offer);
+
+        socket?.emit('call_request', {
+          target_id: friendId,
+          sender_id: localStorage.getItem('userId'),
+          caller_name: userName,
+          type: 'voice',
+          sdp: offer
+        });
+
+      } catch (error) {
+        console.error('创建通话请求失败:', error);
+        handleEndCall();
+        message.error('创建通话请求失败');
+      }
+
+
     } catch (error) {
-      console.error('获取音频失败:', error);
+      console.error('发起通话失败:', error);
       handleEndCall();
+      message.error('发起通话失败');
     }
   };
 
   useEffect(() => {
     if (!socket) return;
 
+    socket.on('call_request_sent', (data) => {
+      console.log('通话请求已发送', data);
+      // 确保通话界面保持打开
+      setIsOpen(true);
+      message.success('通话请求已发送');
+    });
+
     socket.on('call_received', async (data) => {
-        console.log('call_received', data);
+      console.log('call_received', data);
       setCallerName(data.caller_name);
       setShowCallDialog(true);
     });
@@ -118,12 +152,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     });
 
     socket.on('ice_candidate', async (data) => {
+      console.log('ice_candidate', data);
       if (peerConnection.current) {
         await peerConnection.current.addIceCandidate(
           new RTCIceCandidate(data.candidate)
         );
       }
-      
+
     });
 
     socket.on('call_rejected', () => {
@@ -135,33 +170,45 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     });
 
     socket.on('call_error', (error) => {
-        console.error('通话错误:', error);
-        setIsOpen(false);
-        message.error('无法建立通话连接');
+      console.error('通话错误:', error);
+      handleEndCall();
+      message.error(error.message || '无法建立通话连接');
     });
 
     return () => {
+      socket.off('call_request_sent');
       socket.off('call_received');
       socket.off('call_answered');
       socket.off('ice_candidate');
       socket.off('call_rejected');
       socket.off('call_ended');
-    socket.off('call_error');
+      socket.off('call_error');
     };
   }, [socket, createPeerConnection]);
 
   const handleAcceptCall = async (data: any) => {
     try {
+      if (!data.sdp) {
+        throw new Error('无效的通话数据');
+      }
+
       setShowCallDialog(false);
       setIsOpen(true);
-      setIsEnded(false); // 重置结束状态
-      
+      setIsEnded(false);
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStream.current = stream;
-      localAudioRef.current!.srcObject = stream;
+
+      if (localAudioRef.current) {
+        localAudioRef.current.srcObject = stream;
+      }
 
       const pc = createPeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      stream.getTracks().forEach(track => {
+        if (pc && stream) {
+          pc.addTrack(track, stream);
+        }
+      });
 
       await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
       const answer = await pc.createAnswer();
@@ -169,11 +216,14 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
 
       socket?.emit('call_answer', {
         target_id: data.caller_id,
+        sender_id: localStorage.getItem('userId'),
         sdp: answer
       });
+
+      setIsConnected(true);
     } catch (error) {
       console.error('接受通话失败:', error);
-      setIsOpen(false);
+      handleEndCall();
       message.error('无法建立通话连接');
     }
   };
@@ -183,20 +233,24 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     socket?.emit('call_rejected', { target_id: friendId });
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     if (isEnded) return;
-    
+
     try {
       setIsEnded(true);
       setIsOpen(false);
       setIsConnected(false);
       setShowCallDialog(false);
-      
+      setIsCaller(false);
+
+      // 清理资源
       if (localStream.current) {
-        localStream.current.getTracks().forEach(track => track.stop());
+        localStream.current.getTracks().forEach(track => {
+          track.stop();
+        });
         localStream.current = null;
       }
-      
+
       if (peerConnection.current) {
         peerConnection.current.close();
         peerConnection.current = null;
@@ -205,12 +259,11 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = null;
       }
-      
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = null;
       }
 
-      socket?.emit('call_ended', { 
+      socket?.emit('call_ended', {
         target_id: friendId,
         sender_id: localStorage.getItem('userId')
       });
@@ -222,13 +275,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
 
   useEffect(() => {
     return () => {
-      handleEndCall(); // 组件卸载时清理资源
+      handleEndCall();
     };
   }, []);
 
   return (
     <>
-      <IconButton onClick={handleCall}>
+      <IconButton onClick={handleCall} disabled={isOpen}>
         <CallIcon />
       </IconButton>
 
@@ -248,21 +301,21 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
       </Dialog>
 
       {isOpen && (
-        <Draggable bounds="parent" handle=".drag-handle">
-          <Paper
-            sx={{
-              position: 'fixed',
-              right: 20,
-              bottom: 20,
-              zIndex: 1000,
-              width: 300,
-              borderRadius: 2,
-              boxShadow: 3,
-            }}
-          >
-            <Box 
-              className="drag-handle" 
-              sx={{ 
+        <Draggable bounds="body" handle=".drag-handle">
+        <Paper
+          sx={{
+            position: 'fixed',
+            right: 20,
+            bottom: 20,
+            zIndex: 1300,
+            width: 300,
+            borderRadius: 2,
+            boxShadow: 3,
+          }}
+        >
+            <Box
+              className="drag-handle"
+              sx={{
                 cursor: 'move',
                 bgcolor: 'primary.main',
                 color: 'white',
@@ -287,9 +340,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
               </Typography>
             </Box>
           </Paper>
-        </Draggable>
-      )}
-    </>
+        </Draggable>)}    </>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -13,8 +13,8 @@ import FileSharing from './pages/FileSharing';
 import VideoCall from './components/VideoCall';
 import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
-import { message } from 'antd';
 import SocketProvider, { useSocketContext } from './contexts/SocketContextProvider';
+import theme from './theme/theme';
 
 declare global {
   var preUrl: string;
@@ -23,44 +23,6 @@ declare global {
 
 global.preUrl = 'https://chat.yihang01.cn:5000';
 global.socketUrl = 'wss://chat.yihang01.cn:5000';
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#128C7E',  // WhatsApp绿色
-      light: '#25D366',
-      dark: '#075E54',
-    },
-    secondary: {
-      main: '#34B7F1',  // WhatsApp蓝色
-    },
-    background: {
-      default: '#FFFFFF',
-      paper: '#F0F2F5',
-    },
-  },
-  typography: {
-    fontFamily: [
-      '-apple-system',
-      'BlinkMacSystemFont',
-      'Segoe UI',
-      'Roboto',
-      'Arial',
-      'sans-serif'
-    ].join(','),
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          borderRadius: 8,
-        },
-      },
-    },
-  },
-});
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -140,7 +102,7 @@ const App: React.FC = () => {
                   </>
                 )}
                 <Route path="/channel" element={<PublicChannel />} />
-                {/* <Route path="/video-call/:id" element={<VideoCall />} /> */}
+                <Route path="/video-call/:id" element={<VideoCall />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
