@@ -1,4 +1,3 @@
-
 export interface Message {
     id: number;
     sender_id: number;
@@ -87,3 +86,8 @@ export interface ChatItem {
     avatar?: string;
     type: 'group' | 'friend';
   }
+
+export interface AISuggestion {
+  content: string;
+  id: string;
+}
