@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { IconButton, LinearProgress } from '@mui/material';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { IconButton } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import { message } from 'antd';
 import { Socket } from 'socket.io-client';
@@ -14,17 +14,42 @@ interface FileUploaderProps {
         sender_name: string;
         room: string | string[];
     };
+    onUploadProgress: (isUploading: boolean, progress: number) => void;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData }) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ 
+    socket, 
+    roomId, 
+    messageData,
+    onUploadProgress 
+}) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    const receivedChunksRef = useRef(0);
+    const totalChunksRef = useRef(0);
 
     const CHUNK_SIZE = 200 * 1024;
     const MAX_CONCURRENT_UPLOADS = 5;
     const TIMEOUT_DURATION = 5000;
     const MAX_RETRIES = 3;
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUploadProgress = (data: { fileId: string, progress: number }) => {
+            onUploadProgress(true, data.progress);
+        };
+
+        socket.on('upload_progress', handleUploadProgress);
+        return () => {
+            socket.off('upload_progress', handleUploadProgress);
+        };
+    }, [socket, onUploadProgress]);
+
+    const updateUploadProgress = useCallback((received: number, total: number) => {
+        const progress = (received / total) * 100;
+        onUploadProgress(true, progress);
+    }, [onUploadProgress]);
 
     const uploadChunk = async (
         fileId: string,
@@ -35,6 +60,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
     ): Promise<void> => {
         return new Promise((resolve, reject) => {
             const chunkHandler = () => {
+                receivedChunksRef.current += 1;
+                updateUploadProgress(receivedChunksRef.current, totalChunksRef.current);
                 resolve();
             };
 
@@ -69,28 +96,23 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
     };
 
     const uploadChunksConcurrently = async (chunks: ArrayBuffer[], fileId: string, totalChunks: number) => {
-        let completedChunks = 0;
-        const updateProgress = () => {
-            completedChunks++;
-            const progress = (completedChunks / totalChunks) * 100;
-            setUploadProgress(progress);
-        };
-
-        for (let i = 0; i < chunks.length; i += MAX_CONCURRENT_UPLOADS) {
-            const uploadPromises = [];
-            for (let j = 0; j < MAX_CONCURRENT_UPLOADS && i + j < chunks.length; j++) {
-                const chunkIndex = i + j;
-                uploadPromises.push(
-                    uploadChunk(fileId, chunkIndex, chunks[chunkIndex], totalChunks)
-                        .then(() => {
-                            updateProgress();
-                        })
-                );
+        try {
+            for (let i = 0; i < chunks.length; i += MAX_CONCURRENT_UPLOADS) {
+                const uploadPromises = [];
+                for (let j = 0; j < MAX_CONCURRENT_UPLOADS && i + j < chunks.length; j++) {
+                    const chunkIndex = i + j;
+                    uploadPromises.push(uploadChunk(fileId, chunkIndex, chunks[chunkIndex], totalChunks));
+                }
+                await Promise.all(uploadPromises);
             }
-            await Promise.all(uploadPromises).catch((error) => {
-                console.error('分片上传失败:', error);
-                throw error;
-            });
+            // 所有分片上传完成后再关闭进度条
+            setTimeout(() => {
+                setIsUploading(false);
+                onUploadProgress(false, 0);
+            }, 500);
+        } catch (error) {
+            console.error('分片上传失败:', error);
+            throw error;
         }
     };
 
@@ -114,13 +136,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
         };
 
         setIsUploading(true);
-        setUploadProgress(0);
+        receivedChunksRef.current = 0;
+        onUploadProgress(true, 0);  // 添加这行，确保开始时通知父组件
 
         try {
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            totalChunksRef.current = Math.ceil(file.size / CHUNK_SIZE);
             const chunks: ArrayBuffer[] = [];
 
-            for (let i = 0; i < totalChunks; i++) {
+            for (let i = 0; i < totalChunksRef.current; i++) {
                 const start = i * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, file.size);
                 chunks.push(await file.slice(start, end).arrayBuffer());
@@ -135,7 +158,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
                 socket?.emit('file_transfer_start', {
                     fileName,
                     fileSize: file.size,
-                    totalChunks,
+                    totalChunks: totalChunksRef.current,
                     fileType: file.type,
                     message: fileMessageData
                 });
@@ -146,14 +169,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
                 }, 5000);
             });
 
-            await uploadChunksConcurrently(chunks, fileId, totalChunks);
+            await uploadChunksConcurrently(chunks, fileId, totalChunksRef.current);
             message.success('文件上传成功,请稍等');
         } catch (error) {
             console.error('文件上传失败:', error);
             message.error('文件上传失败');
-        } finally {
             setIsUploading(false);
-            setUploadProgress(0);
+            onUploadProgress(false, 0);
         }
     };
 
@@ -165,13 +187,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({ socket, roomId, messageData
                 style={{ display: 'none' }}
                 onChange={handleFileUpload}
             />
-            {isUploading && (
-                <LinearProgress
-                    variant="determinate"
-                    value={uploadProgress}
-                    sx={{ mb: 1, width: '100%' }}
-                />
-            )}
             <IconButton onClick={() => fileInputRef.current?.click()}>
                 <AttachFileIcon />
             </IconButton>
