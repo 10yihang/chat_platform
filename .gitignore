@@ -72,3 +72,4 @@ key.pem
 *.pem
 *.key
 *.crt
+test.py
