@@ -12,18 +12,19 @@ from routes.friend_request import friend_request_bp
 from config import Config
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
+from routes.whiteboard import whiteboard_bp  # 添加白板路由导入
 
 def create_app(app):
     # 配置CORS
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["https://localhost:8000", "https://10.255.253.3:8000", "https://127.0.0.1:8000", "http://10.71.114.215"],
+            "origins": ["http://localhost:8000", "http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://10.71.114.215"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
         },
         r"/socket.io/*": {
-            "origins": ["https://localhost:8000", "https://10.255.253.3:8000", "https://127.0.0.1:8000", "http://10.71.114.215"],
+            "origins": ["http://localhost:8000", "http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://10.71.114.215"],
             # "methods": ["GET", "POST", "OPTIONS"],
             # "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
@@ -31,9 +32,6 @@ def create_app(app):
     })
     
     app.config.from_object(Config)
-    app.add_url_rule('/uploads/<filename>', 'uploaded_file',
-        lambda filename: send_from_directory(app.config['UPLOAD_FOLDER'],
-        filename))
     db.init_app(app)
     print(app.config['JWT_SECRET_KEY'])
     redis_client.init_app(app)
@@ -57,7 +55,10 @@ def create_app(app):
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
     app.register_blueprint(friend_request_bp, url_prefix='/api/friend')
     app.register_blueprint(file_bp, url_prefix='/api/file')
+    app.register_blueprint(whiteboard_bp, url_prefix='/api/whiteboard')  # 注册白板蓝图
     
+    return app
+
 app = Flask(__name__)
 
 if __name__ == '__main__':
@@ -66,4 +67,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     print('数据库初始化完成')
-    socketio.run(app, debug=True, port=5000, host='0.0.0.0', certfile='cert.pem', keyfile='key.pem')
+    socketio.run(app, debug=True, port=5000, host='0.0.0.0')
