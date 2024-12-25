@@ -13,6 +13,8 @@ import SocketProvider, { useSocketContext } from '../contexts/SocketContextProvi
 import { ChatContainer, MessagesContainer, InputContainer } from '../styles';
 import { message } from 'antd';
 import { Socket } from 'socket.io-client';
+import CreateIcon from '@mui/icons-material/Create';
+import Whiteboard from './Whiteboard';
 
 const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -23,6 +25,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [profileDialogOpen, setProfileDialogOpen] = useState(false);
     const messageShownRef = useRef(false);
+    const [showWhiteboard, setShowWhiteboard] = useState(false);
 
     const CHUNK_SIZE = 200 * 1024; // 200KB
     const MAX_CONCURRENT_UPLOADS = 5;
@@ -37,6 +40,19 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
         if (groupId) return `group_${groupId}`;
         if (friendId) return [`user_${friendId}`, `user_${localStorage.getItem('userId')}`];
         return '';
+    }, [channelId, groupId, friendId]);
+
+    const whiteBoardRoomId = useMemo(() => {
+        if (channelId === 'public') return 'group_1';
+        if (groupId) return `group_${groupId}`;
+        if (friendId) {
+            if (parseInt(friendId || '0') < parseInt(localStorage.getItem('userId') || '0')) {
+                return `user${friendId}_user${localStorage.getItem('userId')}`;
+            } else {
+                return `user${localStorage.getItem('userId')}_user${friendId}`;
+            }
+        }
+        return '';  
     }, [channelId, groupId, friendId]);
 
     const handleAvatarClick = (userId: number) => {
@@ -83,10 +99,10 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
         if (socket && roomId) {
             socket.on('message', (message: Message) => {
                 if (message.group_id === (groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0) ||
-                    (message.receiver_id === parseInt(localStorage.getItem('userId') || '0') && 
-                     message.sender_id === (friendId ? parseInt(friendId) : 0)) ||
-                    (message.sender_id === parseInt(localStorage.getItem('userId') || '0') && 
-                     message.receiver_id === (friendId ? parseInt(friendId) : 0))) {
+                    (message.receiver_id === parseInt(localStorage.getItem('userId') || '0') &&
+                        message.sender_id === (friendId ? parseInt(friendId) : 0)) ||
+                    (message.sender_id === parseInt(localStorage.getItem('userId') || '0') &&
+                        message.receiver_id === (friendId ? parseInt(friendId) : 0))) {
                     setMessages(prev => [...prev, message]);
                 }
             });
@@ -127,10 +143,10 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
 
 
     const uploadChunk = async (
-        socket: any, 
-        fileId: string, 
-        chunkIndex: number, 
-        chunk: ArrayBuffer, 
+        socket: any,
+        fileId: string,
+        chunkIndex: number,
+        chunk: ArrayBuffer,
         totalChunks: number,
         retryCount = 0
     ): Promise<void> => {
@@ -205,17 +221,17 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
             message.error('文件大小不能超过1GB');
             return;
         }
-        
+
         const filename_nospace = file.name.replace(/\s/g, '_');
         console.log('文件名:', filename_nospace);
 
         const fileName = encodeURIComponent(filename_nospace);
-        
+
         const messageData = {
             sender_id: parseInt(localStorage.getItem('userId') || '0'),
             receiver_id: friendId ? parseInt(friendId) : 0,
             group_id: groupId ? parseInt(groupId) : channelId === 'public' ? 1 : 0,
-            content: filename_nospace, 
+            content: filename_nospace,
             type: 'file',
             sender_name: localStorage.getItem('userName') || '',
             room: roomId
@@ -271,80 +287,91 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     };
 
     return (
-            <ChatContainer>
-                <MessagesContainer>
-                    {messages.map((message, index) => (
-                        <MessageBubble
-                            key={`${message.id}_${index}`}
-                            message={message}
-                            isown={message.sender_id.toString() === localStorage.getItem('userId')}
-                            avatar={avatar}
-                            onAvatarClick={() => handleAvatarClick(message.sender_id)}
-                        />
-                    ))}
-                    <div ref={messagesEndRef} style={{ height: 0 }} /> {/* 添加高度为0的占位元素 */}
-                </MessagesContainer>
+        <ChatContainer>
+            <MessagesContainer>
+                {messages.map((message, index) => (
+                    <MessageBubble
+                        key={`${message.id}_${index}`}
+                        message={message}
+                        isown={message.sender_id.toString() === localStorage.getItem('userId')}
+                        avatar={avatar}
+                        onAvatarClick={() => handleAvatarClick(message.sender_id)}
+                    />
+                ))}
+                <div ref={messagesEndRef} style={{ height: 0 }} /> {/* 添加高度为0的占位元素 */}
+            </MessagesContainer>
 
-                <UserProfileDialog
-                    open={profileDialogOpen}
-                    onClose={() => setProfileDialogOpen(false)}
-                    userId={selectedUserId || 0}
+            {showWhiteboard && (
+                <Whiteboard
+                    roomId={Array.isArray(whiteBoardRoomId) ? whiteBoardRoomId[0] : whiteBoardRoomId}
+                    onClose={() => setShowWhiteboard(false)}
                 />
+            )}
 
-                <InputContainer>
-                    <Box sx={{ width: '100%' }}>
-                        {isUploading && (
-                            <LinearProgress 
-                                variant="determinate" 
-                                value={uploadProgress} 
-                                sx={{ mb: 1 }}
-                            />
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                onChange={handleFileUpload}
-                            />
-                            <IconButton onClick={() => fileInputRef.current?.click()}>
-                                <AttachFileIcon />
-                            </IconButton>
+            <UserProfileDialog
+                open={profileDialogOpen}
+                onClose={() => setProfileDialogOpen(false)}
+                userId={selectedUserId || 0}
+            />
 
-                            <VoiceCall 
-                                friendId={friendId} 
-                                userName={localStorage.getItem('userName') || ''} 
-                                groupId={groupId}
-                            />
-                            <VideoCall 
-                                friendId={friendId} 
-                                userName={localStorage.getItem('userName') || ''} 
-                                groupId={groupId}
-                            />
+            <InputContainer>
+                <Box sx={{ width: '100%' }}>
+                    {isUploading && (
+                        <LinearProgress
+                            variant="determinate"
+                            value={uploadProgress}
+                            sx={{ mb: 1 }}
+                        />
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={handleFileUpload}
+                        />
+                        <IconButton onClick={() => fileInputRef.current?.click()}>
+                            <AttachFileIcon />
+                        </IconButton>
 
-                            <TextField
-                                fullWidth
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyPress={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSend();
-                                    }
+                        <IconButton onClick={() => setShowWhiteboard(!showWhiteboard)}>
+                            <CreateIcon />
+                        </IconButton>
+
+                        <VoiceCall
+                            friendId={friendId}
+                            userName={localStorage.getItem('userName') || ''}
+                            groupId={groupId}
+                        />
+                        <VideoCall
+                            friendId={friendId}
+                            userName={localStorage.getItem('userName') || ''}
+                            groupId={groupId}
+                        />
+
+                        <TextField
+                            fullWidth
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSend();
                                 }
-                                }
-                                placeholder="输入消息..."
-                                multiline
-                                maxRows={4}
-                                size="small"
-                            />
-                            <IconButton onClick={handleSend} color="primary">
-                                <SendIcon />
-                            </IconButton>
-                        </Box>
+                            }
+                            }
+                            placeholder="输入消息..."
+                            multiline
+                            maxRows={4}
+                            size="small"
+                        />
+                        <IconButton onClick={handleSend} color="primary">
+                            <SendIcon />
+                        </IconButton>
                     </Box>
-                </InputContainer>
-            </ChatContainer>
+                </Box>
+            </InputContainer>
+        </ChatContainer>
     );
 };
 
