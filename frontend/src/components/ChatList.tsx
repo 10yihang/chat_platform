@@ -57,18 +57,93 @@ const ChatList: React.FC = () => {
 
   useEffect(() => {
     if (socket) {
+      // 刷新页面时立即请求在线状态
+      const requestOnlineStatus = () => {
+        const friendIds = chatItems
+          .filter(item => item.type === 'friend')
+          .map(item => item.id);
+          
+        if (friendIds.length > 0) {
+          socket.emit('get_online_status', {
+            user_ids: friendIds
+          });
+        }
+      };
+
+      // 监听连接成功事件
+      socket.on('connect', () => {
+        requestOnlineStatus();
+      });
+
+      // 监听在线用户列表更新
+      socket.on('online_users', (data: { users: number[] }) => {
+        setOnlineUsers(data.users);
+        // 重新请求在线状态以确保数据准确性
+        requestOnlineStatus();
+      });
+
+      // 监听在线状态更新
       socket.on('online_status_update', (statusMap: {[key: number]: boolean}) => {
-        setOnlineUsers(Object.entries(statusMap)
-          .filter(([_, isOnline]) => isOnline)
-          .map(([userId]) => parseInt(userId)));
+        setOnlineUsers(prev => {
+          const newOnlineUsers = Object.entries(statusMap)
+            .filter(([_, isOnline]) => isOnline)
+            .map(([userId]) => parseInt(userId));
+          return Array.from(new Set([...prev, ...newOnlineUsers]));
+        });
       });
 
-      socket.on('user_online', (userId: number) => {
-        setOnlineUsers(prev => [...prev, userId]);
+      // 监听单个用户上线
+      socket.on('user_online', (data: { user_id: number }) => {
+        setOnlineUsers(prev => {
+          if (!prev.includes(data.user_id)) {
+            return [...prev, data.user_id];
+          }
+          return prev;
+        });
       });
 
-      socket.on('user_offline', (userId: number) => {
-        setOnlineUsers(prev => prev.filter(id => id !== userId));
+      // 监听单个用户离线
+      socket.on('user_offline', (data: { user_id: number }) => {
+        setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
+      });
+
+      // 初始化时请求一次在线状态
+      if (chatItems.length > 0) {
+        requestOnlineStatus();
+      }
+
+      return () => {
+        if (socket) {
+          socket.off('connect');
+          socket.off('online_users');
+          socket.off('online_status_update');
+          socket.off('user_online');
+          socket.off('user_offline');
+        }
+      };
+    }
+  }, [socket, chatItems]);
+
+  useEffect(() => {
+    if (socket) {
+      // 监听在线用户列表更新
+      socket.on('online_users', (data: { users: number[] }) => {
+        setOnlineUsers(data.users);
+      });
+
+      // 监听单个用户上线
+      socket.on('user_online', (data: { user_id: number }) => {
+        setOnlineUsers(prev => {
+          if (!prev.includes(data.user_id)) {
+            return [...prev, data.user_id];
+          }
+          return prev;
+        });
+      });
+
+      // 监听单个用户离线
+      socket.on('user_offline', (data: { user_id: number }) => {
+        setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
       });
 
       socket.on('friend_request_accepted', (data: FriendRequestAcceptedData) => {
@@ -89,22 +164,34 @@ const ChatList: React.FC = () => {
           }];
         });
       
+        // 只在用户确实在线时添加到在线列表
         if (newFriend.status === 'online') {
-          setOnlineUsers(prev => [...prev, newFriend.id]);
+          setOnlineUsers(prev => {
+            if (!prev.includes(newFriend.id)) {
+              return [...prev, newFriend.id];
+            }
+            return prev;
+          });
         }
       });
 
+      // 组件加载时请求在线状态
+      socket.emit('get_online_status', {
+        user_ids: chatItems
+          .filter(item => item.type === 'friend')
+          .map(item => item.id)
+      });
     }
 
     return () => {
       if (socket) {
-        socket.off('online_status_update');
+        socket.off('online_users');
         socket.off('user_online');
         socket.off('user_offline');
         socket.off('friend_request_accepted');
       }
     };
-  }, [socket]);
+  }, [socket, chatItems]);
 
   const handleChatItemClick = (item: ChatItem) => {
     if (item.type === 'group') {
