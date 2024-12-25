@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { styled } from '@mui/material/styles';
 import { Badge, Box, TextField, Button, Paper, IconButton, Typography, Avatar } from '@mui/material';
 
@@ -114,4 +115,25 @@ export const OnlineBadge = styled(Badge)(({ theme }) => ({
       content: '""',
     },
   },
+  '@keyframes ripple': {
+    '0%': {
+      transform: 'scale(.8)',
+      opacity: 1,
+    },
+    '100%': {
+      transform: 'scale(2.4)',
+      opacity: 0,
+    },
+  },
 }));
+
+export const PageTransition = styled(motion.div)({
+  width: '100%',
+  height: '100%',
+});
+
+export const pageTransitionVariants = {
+  initial: { opacity: 0, x: 20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -20 }
+};

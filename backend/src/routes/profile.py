@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.profile import Profile
 from models.user import User
 from extensions import db
+from config import Config
 import os
 
 profile_bp = Blueprint('profile', __name__)
@@ -56,7 +57,7 @@ def update_profile():
     db.session.commit()
     return jsonify({'message': '个人资料更新成功'})
 
-@profile_bp.route('/profile/avatar', methods=['POST'])
+@profile_bp.route('/avatar', methods=['POST'])
 @jwt_required()
 def upload_avatar():
     user_id = get_jwt_identity()
@@ -66,11 +67,21 @@ def upload_avatar():
         profile = Profile(user_id=user_id)
         db.session.add(profile)
     
-    file = request.files.get('avatar')
-    if file:
-        filename = f'avatar_{user_id}.jpg'
-        file.save(os.path.join('uploads', 'avatars', filename))
-        profile.avatar = f'/uploads/avatars/{filename}'
-        db.session.commit()
-        
-    return jsonify({'message': '头像上传成功'})
+    try:
+        file = request.files.get('avatar')
+        if file:
+            filename = f'avatar_{user_id}.jpg'
+            storepath = os.path.join(Config.UPLOAD_FOLDER, 'avatar', filename)
+            if not os.path.exists(os.path.join(Config.UPLOAD_FOLDER, 'avatar')):
+                os.makedirs(os.path.join(Config.UPLOAD_FOLDER, 'avatar'))
+            file.save(storepath)
+            # print(f'Avatar saved to {storepath}')
+            profile.avatar = f'{Config.BASE_URL}:{Config.PORT}/api/file/avatar/{filename}'
+            user = User.query.get(user_id)
+            user.avatar = profile.avatar
+            db.session.commit()
+        return jsonify({'message': '头像上传成功'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(str(e))
+        return jsonify({'message': f'头像上传失败: {str(e)}'}), 500
