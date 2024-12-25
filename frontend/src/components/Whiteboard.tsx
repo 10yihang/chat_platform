@@ -30,7 +30,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ roomId, onClose }) => {
     ctx.lineCap = 'round';
     setContext(ctx);
 
-    console.log('Joining whiteboard room:', whiteboardRoomId); 
+    // console.log('Joining whiteboard room:', whiteboardRoomId); 
 
     socket?.emit('join_whiteboard', { 
       room: whiteboardRoomId,
@@ -43,7 +43,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ roomId, onClose }) => {
 
     // 监听绘制事件
     socket?.on('draw', (data: { x: number; y: number; drawing: boolean; color: string; lineWidth: number; room: string }) => {
-        console.log(data.room, whiteboardRoomId)
+        // console.log(data.room, whiteboardRoomId)
       
         if (!context || data.room !== whiteboardRoomId) return;
       
