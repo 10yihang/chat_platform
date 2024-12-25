@@ -33,7 +33,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, u
 
   return (
     <Box sx={{ 
-      height: '100%',
+      height: '100vh',         // 改为100vh
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'
@@ -43,11 +43,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, u
         borderBottom: 1, 
         borderColor: 'divider',
         backgroundColor: '#fff',
-        zIndex: 1000
+        zIndex: 1000,
+        flexShrink: 0         // 添加这行
       }}>
         {title || '加载中...'}
       </Box>
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'hidden',
+        display: 'flex',      // 添加这行
+        flexDirection: 'column' // 添加这行
+      }}>
         <Chat 
           channelId={channelId} 
           groupId={groupId} 
