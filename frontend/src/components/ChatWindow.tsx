@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Paper, InputBase, IconButton, Stack } from '@mui/material';
 import Chat from './Chat';
 import { ChatWindowProps } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, userName, avatar }) => {
   const [title, setTitle] = useState<string>('');
@@ -33,7 +34,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, u
 
   return (
     <Box sx={{ 
-      height: '100vh',         // 改为100vh
+      height: '100%',         // 改为100vh
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'
@@ -54,13 +55,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channelId, groupId, friendId, u
         display: 'flex',      // 添加这行
         flexDirection: 'column' // 添加这行
       }}>
-        <Chat 
-          channelId={channelId} 
-          groupId={groupId} 
-          friendId={friendId} 
-          userName={userName} 
-          avatar={avatar}
-        />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${channelId || ''}-${groupId || ''}-${friendId || ''}`}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            style={{ height: '100%' }}
+          >
+            <Chat 
+              channelId={channelId} 
+              groupId={groupId} 
+              friendId={friendId} 
+              userName={userName} 
+              avatar={avatar}
+            />
+          </motion.div>
+        </AnimatePresence>
       </Box>
     </Box>
   );
