@@ -47,6 +47,7 @@ const Profile: React.FC = () => {
         }
       });
       const data = await response.json();
+      console.log('data:', data);
       setProfile(data);
       setFormData({
         bio: data.bio || '',
@@ -82,8 +83,12 @@ const Profile: React.FC = () => {
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 1024 * 1024) {
+        return alert('文件大小不能超过 1MB');
+      }
       const formData = new FormData();
       formData.append('avatar', file);
+      // console.log('formData:', formData);
       
       try {
         const response = await fetch(`${global.preUrl}/api/profile/avatar`, {
@@ -94,6 +99,7 @@ const Profile: React.FC = () => {
           body: formData
         });
         if (response.ok) {
+          // console.log('response:', response);
           fetchProfile();
         }
       } catch (error) {

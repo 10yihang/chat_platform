@@ -69,4 +69,4 @@ if __name__ == '__main__':
         db.create_all()
     print('数据库初始化完成')
 
-    socketio.run(app, debug=True, port=5000, host='0.0.0.0', certfile='chat.yihang01.cn_bundle.crt', keyfile='chat.yihang01.cn.key')
+    socketio.run(app, debug=True, port=Config.PORT, host='0.0.0.0', certfile='chat.yihang01.cn_bundle.crt', keyfile='chat.yihang01.cn.key')

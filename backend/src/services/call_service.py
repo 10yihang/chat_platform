@@ -116,11 +116,11 @@ class CallService:
                 # 确保双方都收到通话结束事件    
                 emit('call_ended', {
                     'sender_id': sender_id
-                }, room=f'user_{target_id}')
+                }, room=[f'user_{target_id}', request.sid])
                 
-                emit('call_ended', {
-                    'sender_id': sender_id
-                }, room=request.sid)
+                # emit('call_ended', {
+                #     'sender_id': sender_id
+                # }, room=request.sid)
                 
             except Exception as e:
                 print(f"处理通话结束错误: {str(e)}")

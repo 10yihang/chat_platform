@@ -15,6 +15,9 @@ import { styled } from '@mui/material/styles';
 import { useSocketContext } from '../contexts/SocketContextProvider';
 import {ChatItem, FriendRequestAcceptedData} from '../types';
 import {OnlineBadge} from '../styles';
+import { motion } from 'framer-motion';
+
+const ListItemMotion = motion(ListItemButton);
 
 const ChatList: React.FC = () => {
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
@@ -229,10 +232,13 @@ const ChatList: React.FC = () => {
         <Typography variant="h6">聊天</Typography>
       </Box>
       <List>
-        {chatItems.map((item) => (
-          <ListItemButton 
+        {chatItems.map((item, index) => (
+          <ListItemMotion
             key={`${item.type}-${item.id}`}
             onClick={() => handleChatItemClick(item)}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <ListItemAvatar>
               {renderAvatar(item)}
@@ -242,8 +248,7 @@ const ChatList: React.FC = () => {
               secondary={item.type === 'group' ? '群聊' : 
                 onlineUsers.includes(item.id) ? '在线' : '离线'}
             />
-          </ListItemButton>
-        ))}
+          </ListItemMotion>        ))}
       </List>
     </Box>
   );
