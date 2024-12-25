@@ -5,7 +5,7 @@ import { MessagesContainer } from '../../styles';
 
 interface MessageListProps {
     messages: Message[];
-    avatar: string;
+    avatar?: string;
     onAvatarClick: (userId: number) => void;
 }
 

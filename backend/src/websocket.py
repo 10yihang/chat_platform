@@ -42,9 +42,13 @@ def handle_connect(auth):
             algorithms=["HS256"]
         )
         user_id = decoded_token.get('user_id')
+        
+        # 立即更新用户状态并提交
         user = User.query.get(user_id)
-        user.status = 'online'
-        db.session.commit()
+        if user:
+            user.status = 'online'
+            db.session.commit()
+            db.session.refresh(user)  # 刷新用户对象
         
         if not user_id:
             raise Exception('Token中未包含用户ID')
@@ -80,6 +84,8 @@ def handle_connect(auth):
         
         online_users = OnlineUserManager.get_online_users()
         emit('online_users', {'users': online_users}, broadcast=True)
+        # 广播该用户上线消息
+        emit('user_online', {'user_id': user_id}, broadcast=True)
         
         return True
         
@@ -90,36 +96,52 @@ def handle_connect(auth):
 @socketio.on('disconnect')
 def handle_disconnect():
     try:
-        token = request.args.get('token')
-        if token:
-            user_id = decode_token(token).get('user_id')
-            user = User.query.get(user_id)
-            user.status = 'offline'
-            db.session.commit()
-            print(f'disconnect {user_id}')
+        # 通过 request.sid 查找对应的用户 ID
+        for user_id in redis_client.scan_iter("user_sid:*"):
+            user_id_key = user_id.decode('utf-8')
+            sid = redis_client.get(user_id_key)
+            if sid and sid.decode('utf-8') == request.sid:
+                user_id = int(user_id_key.split(':')[1])
+                
+                # 更新用户状态
+                user = User.query.get(user_id)
+                if user:
+                    user.status = 'offline'
+                    db.session.commit()
+                
+                # 清理 Redis 中的数据
+                OnlineUserManager.remove_online_user(user_id)
+                
+                # 清理房间
+                if user_id in user_rooms:
+                    room_list = [user_rooms[user_id]['private']] + user_rooms[user_id]['groups']
+                    for room in room_list:
+                        leave_room(room)
+                    del user_rooms[user_id]
+                
+                # 广播用户离线消息
+                online_users = OnlineUserManager.get_online_users()
+                emit('online_users', {'users': online_users}, broadcast=True)
+                emit('user_offline', {'user_id': user_id}, broadcast=True)
+                break
 
-            if user_id in user_rooms:
-                room_list = [user_rooms[user_id]['private']] + user_rooms[user_id]['groups']
-                for room in room_list:
-                    leave_room(room)
-                del user_rooms[user_id]
-            
-            OnlineUserManager.remove_online_user(user_id)
-            online_users = OnlineUserManager.get_online_users()
-            emit('online_users', {'users': online_users}, broadcast=True)
-            
     except Exception as e:
         print(f"断开连接错误: {str(e)}")
 
 
 @socketio.on('get_online_status')
 def handle_get_online_status(data):
-    user_ids = data.get('user_ids', [])
-    online_status = {
-        user_id: user_id in OnlineUserManager.get_online_users()
-        for user_id in user_ids
-    }
-    emit('online_status_update', online_status)
+    try:
+        user_ids = data.get('user_ids', [])
+        # 从数据库获取用户状态
+        users = User.query.filter(User.id.in_(user_ids)).all()
+        online_status = {
+            user.id: user.status == 'online' or user.id in OnlineUserManager.get_online_users()
+            for user in users
+        }
+        emit('online_status_update', online_status)
+    except Exception as e:
+        print(f"获取在线状态错误: {str(e)}")
 
 @socketio.on('user_online')
 def handle_user_online(data):
