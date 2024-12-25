@@ -24,12 +24,14 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const [aiSuggestion, setAiSuggestion] = useState<string>('');
     const [aiLoading, setAiLoading] = useState(false);
     const abortControllerRef = React.useRef<AbortController | null>(null);
+    const [showAiSuggestion, setShowAiSuggestion] = useState(false);
 
     const getAISuggestion = async (messages: Message[]) => {
         if (!messages.length) return;
 
         const lastMessage = messages[messages.length - 1];
-        if (lastMessage.sender_id.toString() === localStorage.getItem('userId')) return;
+        // 移除下方条件以允许随时请求AI建议
+        // if (lastMessage.sender_id.toString() === localStorage.getItem('userId')) return;
 
         setAiLoading(true);
         setAiSuggestion('');
@@ -112,16 +114,20 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     };
 
     const handleRequestAiSuggestion = () => {
-        if (messages.length > 0) {
-            getAISuggestion(messages);
-        } else {
-            message.info('需要一些聊天记录才能生成建议');
-        }
+        setShowAiSuggestion((prev) => {
+            const newState = !prev;
+            if (!prev && messages.length > 0) {
+                getAISuggestion(messages);
+            } else if (!prev) {
+                message.info('需要一些聊天记录才能生成建议');
+            }
+            return newState;
+        });
     };
 
     return (
         <ChatContainer>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 <MessageList
                     messages={messages}
                     onAvatarClick={handleAvatarClick}
@@ -141,18 +147,21 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
                 userId={selectedUserId || 0}
             />
 
-            <AISuggestion
-                suggestion={aiSuggestion}
-                loading={aiLoading}
-                onSend={handleSendMessage}
-                onCancel={() => {
-                    if (abortControllerRef.current) {
-                        abortControllerRef.current.abort();
-                    }
-                    setAiSuggestion('');
-                    setAiLoading(false);
-                }}
-            />
+            {showAiSuggestion && (
+                <AISuggestion
+                    suggestion={aiSuggestion}
+                    loading={aiLoading}
+                    onSend={handleSendMessage}
+                    onCancel={() => {
+                        if (abortControllerRef.current) {
+                            abortControllerRef.current.abort();
+                        }
+                        setAiSuggestion('');
+                        setAiLoading(false);
+                        setShowAiSuggestion(false);
+                    }}
+                />
+            )}
 
             <MessageInput
                 onSend={handleSendMessage}
