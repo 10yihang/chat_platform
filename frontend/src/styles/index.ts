@@ -7,7 +7,8 @@ export const ChatContainer = styled(Box)({
     display: 'flex',
     flexDirection: 'column',
     background: '#f0f2f5',
-    position: 'relative'
+    position: 'relative',
+    minHeight: '100%'  // 添加最小高度
 });
 
 export const MessagesContainer = styled(Box)({
@@ -16,7 +17,23 @@ export const MessagesContainer = styled(Box)({
     padding: '20px',
     maxWidth: '900px',
     margin: '0 auto',
-    width: '100%'
+    width: '100%',
+    minHeight: 0,     // 添加这行
+    '&::-webkit-scrollbar': {
+        width: '8px',
+        display: 'block'  // 确保滚动条显示
+    },
+    '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1',
+        borderRadius: '4px'
+    },
+    '&::-webkit-scrollbar-thumb': {
+        background: '#888',
+        borderRadius: '4px',
+        '&:hover': {
+            background: '#555'
+        }
+    }
 });
 
 export const MessageContent = styled(Box)<{ isown: boolean }>(({ isown }) => ({
@@ -72,17 +89,14 @@ export const UserName = styled(Typography)({
 });
 
 export const InputContainer = styled(Box)({
-    position: 'sticky',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: '12px 20px',
+    position: 'relative',
+    padding: '8px 20px', // 减小上下padding
     backgroundColor: '#fff',
     borderTop: '1px solid rgba(0, 0, 0, 0.12)',
-    zIndex: 1000,
     maxWidth: '900px',
     margin: '0 auto',
-    width: '100%'
+    width: '100%',
+    transition: 'all 0.3s ease'
 });
 
 export const StyledRoot = styled('div')({
