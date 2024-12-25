@@ -1,17 +1,18 @@
 from flask_socketio import emit
 from flask import request
 from models.user import User
+from extensions import socketio
+
 
 class CallService:
-    def __init__(self, socketio):
-        self.socketio = socketio
+    def __init__(self):
         self.setup_handlers()
         
     def setup_handlers(self):
-        @self.socketio.on('call_request')
+        @socketio.on('call_request')
         def handle_call_request(data):
             try:
-                print(f'处理通话请求: {data}')
+                # print(f'处理通话请求: {data}')
                 sender_id = data.get('sender_id') or request.sid
                 target_id = data.get('target_id')
                 caller_name = data.get('caller_name')
@@ -45,7 +46,7 @@ class CallService:
                 print(f"处理通话请求失败: {str(e)}")
                 emit('call_error', {'message': '处理通话请求失败'}, room=request.sid)
 
-        @self.socketio.on('call_answer')
+        @socketio.on('call_answer')
         def handle_call_answer(data):
             try:
                 sender_id = data.get('sender_id') or request.sid
@@ -66,10 +67,9 @@ class CallService:
                 print(f"处理通话应答失败: {str(e)}")
                 emit('call_error', {'message': '处理通话应答失败'}, room=request.sid)
 
-        @self.socketio.on('ice_candidate')
+        @socketio.on('ice_candidate')
         def handle_ice_candidate(data):
             try:
-                print(f"处理ICE候选: {data}")
                 target_id = data.get('target_id')
                 candidate = data.get('candidate')
                 sender_id = data.get('sender_id', request.sid)
@@ -86,20 +86,42 @@ class CallService:
                 print(f"处理ICE候选失败: {str(e)}")
                 emit('call_error', {'message': '处理ICE候选失败'})
 
-        @self.socketio.on('call_ended')
-        def handle_call_ended(data):
+        @socketio.on('call_rejected')
+        def handle_call_rejected(data):
             try:
-                sender_id = data.get('sender_id', request.sid)
                 target_id = data.get('target_id')
-                sender_id = data.get('sender_id', request.sid)  # 使用socket ID作为备选
+                sender_id = data.get('sender_id', request.sid)
                 
                 if not target_id:
                     emit('call_error', {'message': '目标用户ID不存在'})
                     return
                     
+                emit('call_rejected', {
+                    'sender_id': sender_id
+                }, room=f'user_{target_id}')
+            except Exception as e:
+                print(f"处理通话拒绝失败: {str(e)}")
+                emit('call_error', {'message': '处理通话拒绝失败'})
+
+        @socketio.on('call_ended')
+        def handle_call_ended(data):
+            try:
+                target_id = data.get('target_id')
+                sender_id = data.get('sender_id', request.sid)
+                
+                if not target_id:
+                    emit('call_error', {'message': '目标用户ID不存在'})
+                    return
+                
+                # 确保双方都收到通话结束事件    
                 emit('call_ended', {
                     'sender_id': sender_id
                 }, room=f'user_{target_id}')
+                
+                emit('call_ended', {
+                    'sender_id': sender_id
+                }, room=request.sid)
+                
             except Exception as e:
                 print(f"处理通话结束错误: {str(e)}")
                 emit('call_error', {'message': '处理通话结束请求失败'})
