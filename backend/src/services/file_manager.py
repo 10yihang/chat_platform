@@ -35,8 +35,20 @@ class FileUploadManager:
             if decoded_file_id in self.file_chunks:
                 self.file_chunks[decoded_file_id][chunk_index] = chunk_data
                 self.file_info[decoded_file_id]['received_chunks'] += 1
-                print(f'isTrue: {self.file_info[decoded_file_id]['received_chunks']} ---------: {self.file_info[decoded_file_id]['total_chunks']}')
-                return self.file_info[decoded_file_id]['received_chunks'] == self.file_info[decoded_file_id]['total_chunks']
+                
+                # 计算接收进度
+                total_chunks = self.file_info[decoded_file_id]['total_chunks']
+                received_chunks = self.file_info[decoded_file_id]['received_chunks']
+                progress = (received_chunks / total_chunks) * 100
+                
+                # 发送进度更新
+                from extensions import socketio
+                socketio.emit('upload_progress', {
+                    'fileId': file_id,
+                    'progress': progress
+                })
+                
+                return received_chunks == total_chunks
 
             else:
                 print(f'未找到文件ID: {decoded_file_id}')

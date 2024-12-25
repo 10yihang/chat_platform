@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, TextField, IconButton } from '@mui/material';
+import { Box, TextField, IconButton, LinearProgress, Typography } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import CreateIcon from '@mui/icons-material/Create';
 import FileUploader from './FileUploader';
@@ -25,7 +25,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
     groupId,
     channelId
 }) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [newMessage, setNewMessage] = useState('');
+
+    const handleUploadProgress = (uploading: boolean, progress: number) => {
+        setIsUploading(uploading);
+        setUploadProgress(progress);
+    };
 
     const handleSend = () => {
         if (!newMessage.trim()) return;
@@ -42,12 +49,42 @@ const MessageInput: React.FC<MessageInputProps> = ({
     };
 
     return (
-        <Box sx={{ width: '100%' }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ width: '100%', position: 'relative' }}>
+            {isUploading && (
+                <Box sx={{ 
+                    position: 'absolute', 
+                    top: -24,  // 调整位置，为文字留出空间
+                    left: 0, 
+                    right: 0,
+                    zIndex: 1 
+                }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 0.5  // 添加文字和进度条之间的间距
+                    }}>
+                        <Typography variant="caption" color="primary">
+                            {`上传进度: ${Math.round(uploadProgress)}%`}
+                        </Typography>
+                    </Box>
+                    <LinearProgress
+                        variant="determinate"
+                        value={uploadProgress}
+                        sx={{ 
+                            width: '100%',
+                            height: 4,
+                            borderRadius: 1
+                        }}
+                    />
+                </Box>
+            )}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: isUploading ? 4 : 0 }}>
                 <FileUploader
                     socket={socket}
                     roomId={roomId}
                     messageData={messageData}
+                    onUploadProgress={handleUploadProgress}
                 />
                 
                 <IconButton onClick={onWhiteboardToggle}>
