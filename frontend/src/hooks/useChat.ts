@@ -4,6 +4,7 @@ import { Socket } from 'socket.io-client';
 
 export const useChat = (socket: Socket | null, roomId: string | string[], channelId?: string, groupId?: string, friendId?: string) => {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [avator, setAvator] = useState<string[]>(['']);
 
     useEffect(() => {
         const loadHistory = async () => {
@@ -68,5 +69,5 @@ export const useChat = (socket: Socket | null, roomId: string | string[], channe
         socket?.emit('chat', { message: messageData, room: roomId });
     };
 
-    return { messages, sendMessage };
+    return { messages, sendMessage, avator};
 };

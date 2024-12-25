@@ -18,7 +18,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const { socket } = useSocketContext();
     const { chatRoomId, whiteBoardRoomId } = useRoomId(channelId, groupId, friendId);
     const { messages, sendMessage } = useChat(socket, chatRoomId, channelId, groupId, friendId);
-
+    console.log('messages:', messages);
     const handleSendMessage = async (content: string) => {
         try {
             await sendMessage(content);
@@ -36,7 +36,6 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
         <ChatContainer>
             <MessageList
                 messages={messages}
-                avatar={avatar}
                 onAvatarClick={handleAvatarClick}
             />
 

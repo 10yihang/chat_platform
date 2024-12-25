@@ -34,3 +34,19 @@ def uploaded_file(filename):
     except Exception as e:
         print(f"File download error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    
+@file_bp.route('/avatar/<path:filename>', methods=['GET'])
+def get_avatar(filename):
+    try:
+        avatar_path = os.path.join(Config.UPLOAD_FOLDER, 'avatar', filename)
+        # print(f"Avatar path: {avatar_path}")
+        try:
+            with open(avatar_path, 'rb') as avatar:
+                return avatar.read(), 200, {'Content-Type': 'image/jpeg'}
+        except FileNotFoundError:
+            print(f"Avatar not found: {avatar_path}")
+            return jsonify({'error': 'Avatar not found'}), 404
+
+    except Exception as e:
+        print(f"获取头像失败: {str(e)}")
+        return jsonify({'error': str(e)}), 500
