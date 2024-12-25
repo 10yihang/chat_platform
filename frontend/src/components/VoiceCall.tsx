@@ -35,6 +35,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
   const { socket } = useSocketContext();
+  const iceCandidatesQueue = useRef<RTCIceCandidate[]>([]);
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection({
@@ -60,6 +61,33 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     peerConnection.current = pc;
     return pc;
   }, [friendId, socket]);
+
+  const addIceCandidate = async (candidate: RTCIceCandidate) => {
+    try {
+      if (peerConnection.current?.remoteDescription) {
+        await peerConnection.current.addIceCandidate(candidate);
+      } else {
+        iceCandidatesQueue.current.push(candidate);
+      }
+    } catch (error) {
+      console.error('添加ICE候选项失败:', error);
+    }
+  };
+
+  const processIceCandidatesQueue = async () => {
+    if (!peerConnection.current?.remoteDescription) return;
+    
+    while (iceCandidatesQueue.current.length) {
+      const candidate = iceCandidatesQueue.current.shift();
+      if (candidate) {
+        try {
+          await peerConnection.current.addIceCandidate(candidate);
+        } catch (error) {
+          console.error('处理队列中的ICE候选项失败:', error);
+        }
+      }
+    }
+  };
 
   const handleCall = async () => {
     try {
@@ -104,6 +132,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
         });
         await pc.setLocalDescription(offer);
 
+        // console.log('发起通话请求:', offer);
         socket?.emit('call_request', {
           target_id: friendId,
           sender_id: localStorage.getItem('userId'),
@@ -130,42 +159,57 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     if (!socket) return;
 
     socket.on('call_request_sent', (data) => {
-      console.log('通话请求已发送', data);
+      // console.log('通话请求已发送', data);
       // 确保通话界面保持打开
       setIsOpen(true);
       message.success('通话请求已发送');
     });
 
     socket.on('call_received', async (data) => {
-      console.log('call_received', data);
+      console.log('收到通话请求:', data);  // 添加日志
       setCallerName(data.caller_name);
+      // 保存远程 SDP
+      if (data.sdp) {
+        sessionStorage.setItem('incomingCallSDP', JSON.stringify(data.sdp));
+      }
       setShowCallDialog(true);
     });
 
     socket.on('call_answered', async (data) => {
-      if (peerConnection.current) {
-        await peerConnection.current.setRemoteDescription(
-          new RTCSessionDescription(data.sdp)
-        );
+      try {
+        if (peerConnection.current) {
+          await peerConnection.current.setRemoteDescription(
+            new RTCSessionDescription(data.sdp)
+          );
+          await processIceCandidatesQueue();  // 处理排队的ICE候选项
+        }
+        setIsConnected(true);
+      } catch (error) {
+        console.error('设置远程描述失败:', error);
+        handleEndCall();
       }
-      setIsConnected(true);
     });
 
     socket.on('ice_candidate', async (data) => {
-      console.log('ice_candidate', data);
-      if (peerConnection.current) {
-        await peerConnection.current.addIceCandidate(
-          new RTCIceCandidate(data.candidate)
-        );
+      if (!peerConnection.current) return;
+      
+      try {
+        const candidate = new RTCIceCandidate(data.candidate);
+        await addIceCandidate(candidate);
+      } catch (error) {
+        console.error('处理ICE候选项失败:', error);
       }
-
     });
 
     socket.on('call_rejected', () => {
+      console.log('通话被拒绝');
+      message.info('对方拒绝了通话');
       handleEndCall();
     });
 
     socket.on('call_ended', () => {
+      console.log('通话结束');
+      message.info('通话已结束');
       handleEndCall();
     });
 
@@ -186,11 +230,15 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
     };
   }, [socket, createPeerConnection]);
 
-  const handleAcceptCall = async (data: any) => {
+  const handleAcceptCall = async () => {
     try {
-      if (!data.sdp) {
+      const storedSDP = sessionStorage.getItem('incomingCallSDP');
+      if (!storedSDP) {
         throw new Error('无效的通话数据');
       }
+
+      const incomingSDP = JSON.parse(storedSDP);
+      console.log('接受通话，使用SDP:', incomingSDP);
 
       setShowCallDialog(false);
       setIsOpen(true);
@@ -210,17 +258,28 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
         }
       });
 
-      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      // 设置远程描述
+      await pc.setRemoteDescription(new RTCSessionDescription(incomingSDP));
+      
+      // 创建应答
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
+      // 处理之前缓存的ICE候选项
+      await processIceCandidatesQueue();
+
+      // 发送应答
       socket?.emit('call_answer', {
-        target_id: data.caller_id,
+        target_id: friendId,
         sender_id: localStorage.getItem('userId'),
         sdp: answer
       });
 
       setIsConnected(true);
+      
+      // 清理存储的 SDP
+      sessionStorage.removeItem('incomingCallSDP');
+      
     } catch (error) {
       console.error('接受通话失败:', error);
       handleEndCall();
@@ -229,8 +288,16 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
   };
 
   const handleRejectCall = () => {
-    setShowCallDialog(false);
-    socket?.emit('call_rejected', { target_id: friendId });
+    try {
+      setShowCallDialog(false);
+      socket?.emit('call_rejected', { 
+        target_id: friendId,
+        sender_id: localStorage.getItem('userId')
+      });
+      handleEndCall();  // 确保本地状态被清理
+    } catch (error) {
+      console.error('拒绝通话失败:', error);
+    }
   };
 
   const handleEndCall = async () => {
@@ -243,7 +310,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
       setShowCallDialog(false);
       setIsCaller(false);
 
-      // 清理资源
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => {
           track.stop();
@@ -263,10 +329,14 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
         remoteAudioRef.current.srcObject = null;
       }
 
-      socket?.emit('call_ended', {
-        target_id: friendId,
-        sender_id: localStorage.getItem('userId')
-      });
+      if (!isEnded) {
+        socket?.emit('call_ended', {
+          target_id: friendId,
+          sender_id: localStorage.getItem('userId')
+        });
+      }
+
+      sessionStorage.removeItem('incomingCallSDP');
 
     } catch (error) {
       console.error('结束通话失败:', error);
@@ -294,7 +364,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
           <Button onClick={handleRejectCall} color="error">
             拒绝
           </Button>
-          <Button onClick={() => handleAcceptCall({ caller_id: friendId, sdp: peerConnection.current?.localDescription })} color="primary" autoFocus>
+          <Button onClick={handleAcceptCall} color="primary" autoFocus>
             接受
           </Button>
         </DialogActions>
