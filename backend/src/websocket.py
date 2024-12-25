@@ -1,5 +1,6 @@
 from flask_socketio import emit, join_room, leave_room, rooms
 from extensions import db, socketio, redis_client
+from services.call_service import CallService  # 添加导入
 from flask import request, current_app
 from models.group_member import GroupMember
 from models.user import User
@@ -7,6 +8,8 @@ from flask_jwt_extended import decode_token, verify_jwt_in_request, get_jwt_iden
 
 import jwt
 from config import Config
+
+call_service = CallService()
 
 class OnlineUserManager:
     @staticmethod

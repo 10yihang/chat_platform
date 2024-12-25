@@ -16,7 +16,6 @@ from extensions import socketio
 from flask_socketio import emit
 
 class ChatService:
-
     def __init__(self):
         self.setup_socket_handlers()
         self.file_manager = FileUploadManager()
