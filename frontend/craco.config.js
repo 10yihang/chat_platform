@@ -2,7 +2,7 @@ const { whenProd, getPlugin, pluginByName } = require('@craco/craco');
 
 module.exports = {
     devServer: {
-        https: false,
+        https: true,
         setupMiddlewares: (middlewares, devServer) => {
             if (!devServer) {
               throw new Error('webpack-dev-server is not defined');

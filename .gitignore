@@ -73,3 +73,4 @@ key.pem
 *.key
 *.crt
 test.py
+backend/chat.yihang01.cn.csr

@@ -13,18 +13,19 @@ from config import Config
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
 from routes.whiteboard import whiteboard_bp  # 添加白板路由导入
+import ssl, os
 
 def create_app(app):
     # 配置CORS
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:8000", "http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://10.71.114.215"],
+            "origins": ["https://localhost", "https://10.255.253.3", "https://127.0.0.1", "http://10.71.114.215", "https://chat.yihang01.cn"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
         },
         r"/socket.io/*": {
-            "origins": ["http://localhost:8000", "http://10.255.253.3:8000", "http://127.0.0.1:8000", "http://10.71.114.215"],
+            "origins": ["https://localhost", "https://10.255.253.3", "https://127.0.0.1", "http://10.71.114.215", "https://chat.yihang01.cn"],
             # "methods": ["GET", "POST", "OPTIONS"],
             # "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
@@ -67,4 +68,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     print('数据库初始化完成')
-    socketio.run(app, debug=True, port=5000, host='0.0.0.0')
+
+    socketio.run(app, debug=True, port=5000, host='0.0.0.0', certfile='chat.yihang01.cn_bundle.crt', keyfile='chat.yihang01.cn.key')
