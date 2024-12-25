@@ -301,7 +301,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
   };
 
   const handleEndCall = async () => {
-    if (isEnded) return;
+    if (isEnded || !isOpen) return;
 
     try {
       setIsEnded(true);

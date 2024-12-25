@@ -5,11 +5,10 @@ import { MessagesContainer } from '../../styles';
 
 interface MessageListProps {
     messages: Message[];
-    avatar?: string;
     onAvatarClick: (userId: number) => void;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, avatar, onAvatarClick }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, onAvatarClick }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -27,7 +26,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, avatar, onAvatarCli
                     key={`${message.id}_${index}`}
                     message={message}
                     isown={message.sender_id.toString() === localStorage.getItem('userId')}
-                    avatar={avatar}
+                    avatar={`https://chat.yihang01.cn:5000/api/file/avatar/avatar_${message.sender_id}.jpg`}
                     onAvatarClick={() => onAvatarClick(message.sender_id)}
                 />
             ))}

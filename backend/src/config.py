@@ -23,3 +23,5 @@ class Config:
     SSL_CERT = 'cert.pem'
     SSL_KEY = 'key.pem'
     PREFERRED_URL_SCHEME = 'https'
+    BASE_URL = 'https://chat.yihang01.cn'
+    PORT = 5000
