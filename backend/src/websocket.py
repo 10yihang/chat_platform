@@ -43,7 +43,6 @@ def handle_connect(auth):
         )
         user_id = decoded_token.get('user_id')
         
-        # 立即更新用户状态并提交
         user = User.query.get(user_id)
         if user:
             user.status = 'online'
