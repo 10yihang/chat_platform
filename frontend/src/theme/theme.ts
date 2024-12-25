@@ -54,6 +54,7 @@ const theme = createTheme({
             padding: '8px 16px',
             fontWeight: 500,
             boxShadow: 'none',
+            transition: 'all 0.3s ease-in-out',
             '&:hover': {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             },
@@ -84,6 +85,7 @@ const theme = createTheme({
         styleOverrides: {
           root: {
             borderRadius: 12,
+            transition: 'all 0.3s ease-in-out',
           },
           elevation1: {
             boxShadow: '0 2px 12px rgba(0,0,0,0.08)',

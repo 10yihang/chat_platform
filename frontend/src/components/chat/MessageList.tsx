@@ -29,7 +29,10 @@ const MessageList: React.FC<MessageListProps> = ({ messages, onAvatarClick }) =>
     }, [messages]);
 
     return (
-        <MessagesContainer ref={containerRef}>
+        <MessagesContainer
+            ref={containerRef}
+            style={{ transition: 'opacity 0.5s ease-in-out', opacity: 1 }}
+        >
             <Box sx={{ flexGrow: 1, minHeight: 'min-content' }}>
                 {messages.map((message, index) => (
                     <MessageBubble

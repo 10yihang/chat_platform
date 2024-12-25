@@ -1,23 +1,112 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Chip, Box, CircularProgress, Stack } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { motion } from 'framer-motion';
 
 export interface AISuggestionProps {
-  suggestion: string;
-  loading: boolean;
+  messages: any[];
   onSend: (text: string) => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
 const AISuggestion: React.FC<AISuggestionProps> = ({ 
-  suggestion, 
-  loading, 
+  messages, 
   onSend,
-  onCancel 
+  onClose 
 }) => {
-  if (!suggestion && !loading) return null;
+  const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState('');
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!messages.length) return;
+    // 发起 AI 请求
+    fetchAiSuggestion();
+    // 移除 abort 调用，允许请求继续执行
+    // return () => {
+    //   if (abortControllerRef.current) {
+    //     abortControllerRef.current.abort();
+    //   }
+    // };
+  }, [messages]);
+
+  const fetchAiSuggestion = async () => {
+    try {
+      setLoading(true);
+      setSuggestion('');
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
+      console.log('Fetching AI suggestion...');
+      const response = await fetch(`${global.preUrl}/api/ai/suggest/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          messages: messages.slice(Math.max(-messages.length, -15)),
+          current_user_id: localStorage.getItem('userId'),
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        console.error('Response not OK:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        console.error('No reader available');
+        return;
+      }
+
+      console.log('Starting to read stream...');
+      const decoder = new TextDecoder();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value);
+        console.log('Received text:', text);
+
+        const lines = text.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              console.log('Parsed data:', data);
+              if (data.content) {
+                setSuggestion(prev => {
+                  const newSuggestion = prev + data.content;
+                  console.log('Updated suggestion:', newSuggestion);
+                  return newSuggestion;
+                });
+              }
+              if (data.error) {
+                console.error('Error from server:', data.error);
+              }
+            } catch (e) {
+              console.error('解析数据失败:', e, 'Raw line:', line);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return;
+      }
+      console.error('获取AI建议失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!messages.length) return null;
 
   return (
     <Box 
@@ -45,7 +134,7 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
             <Chip
               icon={<CancelIcon />}
               label="取消"
-              onClick={onCancel}
+              onClick={onClose}
               variant="outlined"
               color="error"
               clickable
@@ -55,7 +144,7 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
           <>
             <Chip
               icon={<SmartToyIcon />}
-              label={suggestion}
+              label={suggestion || '正在思考中...'}
               onClick={() => suggestion && onSend(suggestion)}
               variant="outlined"
               clickable
@@ -64,7 +153,7 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
             <Chip
               icon={<CancelIcon />}
               label="关闭"
-              onClick={onCancel}
+              onClick={onClose}
               variant="outlined"
               color="error"
               clickable
