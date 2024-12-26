@@ -35,7 +35,6 @@ def create_app(app):
     
     app.config.from_object(Config)
     db.init_app(app)
-    print(app.config['JWT_SECRET_KEY'])
     redis_client.init_app(app)
     JWTManager(app)
     
