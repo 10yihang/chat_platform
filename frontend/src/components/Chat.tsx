@@ -18,6 +18,7 @@ import { useRoomId } from '../hooks/useRoomId';
 import { message } from 'antd';
 import { Message } from '../types';
 import AISuggestion from './chat/AISuggestion';
+import { channel } from 'diagnostics_channel';
 
 const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => {
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -27,7 +28,9 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const { chatRoomId, whiteBoardRoomId } = useRoomId(channelId, groupId, friendId);
     const { messages, sendMessage } = useChat(socket, chatRoomId, channelId, groupId, friendId);
     const [showAiSuggestion, setShowAiSuggestion] = useState(false);
-    const [selectedModel, setSelectedModel] = useState('doubao');  // 新增state
+    const [selectedModel, setSelectedModel] = useState('doubao');  
+
+    // console.log(channelId, groupId, friendId);
 
     const handleSendMessage = async (content: string) => {
         try {
@@ -88,6 +91,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
                 groupId={groupId}
                 channelId={channelId}
                 onRequestAiSuggestion={handleRequestAiSuggestion}
+                onClose={() => setShowAiSuggestion(false)} // 添加onClose属性
             />
         </ChatContainer>
     );

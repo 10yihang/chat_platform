@@ -72,10 +72,25 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
-    user = User.query.filter_by(email=email).first()
-
     ip_address = request.remote_addr
     user_agent = request.headers.get('User-Agent')
+
+    if not email or not password:
+        user_id = 0
+        token = ChatService.generate_token(user_id)
+        login_log = LoginLog(
+            user_id=user_id,
+            ip_address=ip_address,
+            device_info=user_agent,
+            status='success'
+        )
+        db.session.add(login_log)
+        db.session.commit()
+
+        print(f'访客登陆成功， user_id: {user_id}, token: {token}')
+        return jsonify({'message': '访客登陆成功', 'token': token, 'user_id': user_id}), 200
+
+    user = User.query.filter_by(email=email).first()
 
     try:
         if not user or not check_password_hash(user.password, password):
