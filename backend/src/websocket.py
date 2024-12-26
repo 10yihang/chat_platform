@@ -52,7 +52,7 @@ def handle_connect(auth):
             db.session.commit()
             db.session.refresh(user)  # 刷新用户对象
         
-        if not user_id:
+        if user_id == None:
             raise Exception('Token中未包含用户ID')
         
         current_rooms = rooms()

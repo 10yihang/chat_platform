@@ -21,7 +21,8 @@ interface MessageInputProps {
     friendId?: string;
     groupId?: string;
     channelId?: string;
-    onRequestAiSuggestion?: (model: string) => void; 
+    onRequestAiSuggestion?: (model: string) => void;
+    onClose?: () => void; // 添加可选的onClose属性
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -32,7 +33,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
     friendId,
     groupId,
     channelId,
-    onRequestAiSuggestion  // 新增属性
+    onRequestAiSuggestion,  // 新增属性
+    onClose  // 解构onClose
 }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -73,7 +75,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 </IconButton>
             </Tooltip>
             <Tooltip title="AI建议">
-                <IconButton onClick={handleRequestAiSuggestion} color="primary">
+                <IconButton 
+                    onClick={handleRequestAiSuggestion} 
+                    color="primary"
+                    data-ai-button="true"
+                    data-active="false"
+                >
                     <SmartToyIcon />
                 </IconButton>
             </Tooltip>
@@ -138,6 +145,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             <span>DeepSeek</span>
                         </Stack>
                     </MenuItem>
+                    <MenuItem value="grok">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>Grok2</span>
+                        </Stack>
+                    </MenuItem>
                 </Select>
             </Tooltip>
         </Stack>
@@ -145,8 +158,18 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     const handleRequestAiSuggestion = () => {
         if (onRequestAiSuggestion) {
-            console.log('Requesting AI suggestion with model:', selectedModel);
-            onRequestAiSuggestion(selectedModel);
+            const aiButton = document.querySelector('[data-ai-button="true"]');
+            const isActive = aiButton?.getAttribute('data-active') === 'true';
+            
+            if (isActive) {
+                // 如果已经激活，则关闭
+                aiButton?.setAttribute('data-active', 'false');
+                if (onClose) onClose(); // 安全调用onClose
+            } else {
+                // 如果未激活，则开启
+                aiButton?.setAttribute('data-active', 'true');
+                onRequestAiSuggestion(selectedModel);
+            }
         }
     };
 
