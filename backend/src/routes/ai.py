@@ -13,15 +13,22 @@ import google.generativeai as genai
 class AIModel(Enum):
     DOUBAO = 1
     GEMINI = 2
+    DEEPSEEK = 3
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
+DEEP_API_KEY = os.getenv('DEEP_API_KEY')
 
 ai_bp = Blueprint('ai', __name__)
 
 Doubao_Client = Ark(
     base_url="https://ark.cn-beijing.volces.com/api/v3",
+)
+
+Deep_SeeK_Client = OpenAI(
+    api_key=DEEP_API_KEY,
+    base_url="https://api.deepseek.ai",
 )
 
 AI_PROMPT = '''
@@ -112,6 +119,27 @@ def suggest_stream():
             print(f"Error calling Gemini API: {e}")
             return None
 
+    def get_Deep_response(messages, current_user_id):
+        conversation = []
+        for message in messages:
+            sender = message.get('sender_id')
+            content = message.get('content')
+            if sender and content:
+                conversation.append(f'用户{sender}: {content}')
+            else:
+                print(f"Invalid message format: {message}") 
+                continue
+        prompt = AI_PROMPT.format(current_user_id, '\n'.join(conversation))
+        try:
+            return Deep_SeeK_Client.chat.create(
+                model = "deepseek-chat",
+                messages=[{"role": "system", "content": prompt}],
+                stream=True
+            )
+        except Exception as e:
+            print(f"Error calling Doubao API: {e}")
+            return None
+
     def Doubao_generate():
         stream = get_Doubao_response(messages, current_user_id)
         if stream is None:
@@ -143,8 +171,33 @@ def suggest_stream():
             print(f"Error processing stream: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
+    def DeepSeek_generate():
+        stream = get_Deep_response(messages, current_user_id)
+        if stream is None:
+            yield f"data: {json.dumps({'error': 'Failed to get AI response'})}\n\n"
+            return
+        try:
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    # print(f"Sending content: {content}")
+                    yield f"data: {json.dumps({'content': content})}\n\n"
+        except Exception as e:
+            print(f"Error processing stream: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    
+
+    def AI_generate():
+        if choose_model == AIModel.DOUBAO:
+            return Doubao_generate()
+        elif choose_model == AIModel.GEMINI:
+            return Gemeni_generate()
+        elif choose_model == AIModel.DEEPSEEK:
+            return DeepSeek_generate()
+
     return Response(
         # stream_with_context(Doubao_generate()),
-        stream_with_context(Doubao_generate()) if choose_model == AIModel.DOUBAO else stream_with_context(Gemeni_generate()),
+        stream_with_context(AI_generate()),
         mimetype='text/event-stream'
     )
