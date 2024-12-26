@@ -46,7 +46,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('email', data.email);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('IsGuest', 'false');
-        localStorage.setItem('userName', data.username);
         onLogin(isGuest);
       } else {
         setError(data.message || '登录失败');
@@ -60,11 +59,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     console.log('登录信息:', { email, password });
   };
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     if (username) {
       localStorage.setItem('IsGuest', 'true');
       localStorage.setItem('guestName', username);
-      onLogin(true);
+      setLoginLoading(true);
+    try {
+      const response = await fetch(preUrl + '/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: '',
+          password: '',
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', username);
+        // localStorage.setItem('email', data.email);
+        localStorage.setItem('userId', '0');
+        localStorage.setItem('IsGuest', 'true');
+        onLogin(isGuest);
+      } else {
+        setError(data.message || '登录失败');
+      }
+    } catch (err) {
+      setError('网络错误，请稍后重试');
+    } finally {
+      setLoginLoading(false);
+    }
     }
   };
 
@@ -147,10 +174,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </>
             ) : (
               <>
-                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
+                <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
                 <TextField label="密码" type="password" fullWidth onChange={(e) => setPassword(e.target.value)} />
                 <TextField label="确认密码" type="password" fullWidth onChange={(e) => setConfirmPassword(e.target.value)} />
-                <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
+                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
                 <Button variant="contained" fullWidth onClick={handleRegister}>
                   {registerLoading ? <CircularProgress size={24} /> : '注册'}
                 </Button>

@@ -9,10 +9,10 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_TOKEN_LOCATION = ['headers', 'query_string']
     MYSQL_CONFIG = {
-        'host': '',
-        'port': ,
-        'user': '',
-        'password': '',
+        'host': '10.255.253.63',
+        'port': 3306,
+        'user': 'root',
+        'password': 'hyh208116',
         'database': 'chat_platform',
         'charset': 'utf8mb4'
     }

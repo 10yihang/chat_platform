@@ -72,6 +72,24 @@ def login():
     email = data.get('email')
     password = data.get('password')
 
+    token = ChatService.generate_token(0)
+
+    try:
+        if email == '' and password == '':
+            print(f'访客发送的token: {token}')
+            return jsonify({
+                'message': '登录成功',
+                # 'username': user.username,
+                # 'email': user.email,
+                'userId': 0,
+                'token': token
+            }), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'message': '服务器错误,访客登陆失败'}), 500
+    
+    # print(f'访客发送的token: {token}')
+
     user = User.query.filter_by(email=email).first()
 
     ip_address = request.remote_addr
