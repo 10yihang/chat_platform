@@ -1,3 +1,9 @@
+/*
+ * @author: yihang_01
+ * @Date: 2024-12-26 00:55:48
+ * @LastEditTime: 2024-12-26 16:10:38
+ * QwQ 加油加油
+ */
 import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { useSocketContext } from '../contexts/SocketContextProvider';
@@ -21,6 +27,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const { chatRoomId, whiteBoardRoomId } = useRoomId(channelId, groupId, friendId);
     const { messages, sendMessage } = useChat(socket, chatRoomId, channelId, groupId, friendId);
     const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+    const [selectedModel, setSelectedModel] = useState('doubao');  // 新增state
 
     const handleSendMessage = async (content: string) => {
         try {
@@ -35,8 +42,10 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
         setProfileDialogOpen(true);
     };
 
-    const handleRequestAiSuggestion = () => {
-        setShowAiSuggestion(prev => !prev);
+    const handleRequestAiSuggestion = (model: string) => {
+        console.log('Chat received model:', model);
+        setSelectedModel(model);
+        setShowAiSuggestion(true);
     };
 
     return (
@@ -66,6 +75,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
                     messages={messages}
                     onSend={handleSendMessage}
                     onClose={() => setShowAiSuggestion(false)}
+                    model={selectedModel}  // 使用选中的模型
                 />
             )}
 
