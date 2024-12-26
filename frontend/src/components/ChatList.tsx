@@ -17,7 +17,7 @@ import {ChatItem, FriendRequestAcceptedData} from '../types';
 import {OnlineBadge} from '../styles';
 import { motion } from 'framer-motion';
 
-const ListItemMotion = motion(ListItemButton);
+const ListItemMotion = motion.create(ListItemButton);
 
 const ChatList: React.FC = () => {
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
