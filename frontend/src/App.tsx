@@ -9,7 +9,6 @@ import ChatApp from './pages/ChatApp';
 import PublicChannel from './pages/PublicChannel';
 import FriendList from './pages/FriendList';
 import Profile from './pages/Profile';
-import FileSharing from './pages/FileSharing';
 import VideoCall from './components/VideoCall';
 import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
@@ -88,21 +87,20 @@ const App: React.FC = () => {
           <SocketProvider>
             <Layout onLogout={handleLogout}>
               <Routes>
-                <Route path="/" element={<Navigate to="/chat" replace />} />
-                <Route path="/chat" element={<ChatApp />} />
+                <Route path="/" element={<Navigate to="/chat/group/1" replace />} />
+                <Route path="/chat" element={<Navigate to="/chat/group/1" replace />} />
                 <Route path="/chat/group/:id" element={<ChatApp />} />
                 <Route path="/chat/friend/:id" element={<ChatApp />} />
                 {!isGuest && (
                   <>
-                    <Route path="/chat/:id" element={<ChatApp />} />
+                    {/* <Route path="/chat/:id" element={<ChatApp />} /> */}
                     <Route path="/friends" element={<FriendList />} />
                     <Route path="/profile" element={<Profile />} />
-                    <Route path="/files" element={<FileSharing />} />
                     <Route path="/settings" element={<Settings />} />
                   </>
                 )}
                 <Route path="/channel" element={<PublicChannel />} />
-                <Route path="/video-call/:id" element={<VideoCall />} />
+                {/* <Route path="/video-call/:id" element={<VideoCall />} /> */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

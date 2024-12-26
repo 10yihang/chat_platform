@@ -60,6 +60,8 @@ def get_history():
         data = request.get_json()
         group_id = data.get('groupId')
         friend_id = data.get('friendId')
+
+        print(f'group_id: {group_id}, friend_id: {friend_id}', user_id)
         
         query = Message.query
         
