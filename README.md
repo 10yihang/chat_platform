@@ -1,65 +1,173 @@
+<!--
+ * @author: yihang_01
+ * @Date: 2024-12-17 01:17:53
+ * @LastEditTime: 2024-12-26 16:41:18
+ * QwQ 加油加油
+-->
 # README.md
 
-# 在线聊天网站
+# 在线聊天平台
 
-这是一个在线聊天网站，允许用户实时聊天、上传和共享文件、播放音乐和视频，以及进行语音和视频通话。
+一个功能完整的在线聊天平台，支持实时通讯、文件共享、音视频通话等功能。
 
-## 功能
+## 🌟 主要功能
 
-- 实时聊天功能
-- 文件上传和共享
-- 音频和视频播放
-- 语音通话和视频通话
+### 用户系统
+- 账户注册与登录
+- 用户资料管理
+- 游客模式支持
 
-## 技术栈
+### 即时通讯
+- 私人聊天
+- 群组聊天
+- 公共频道
+- 消息历史记录
+- 表情包支持
+- 图片分享
 
-- 后端：Python, Flask
-- 前端：React, TypeScript
+### 音视频功能
+- 实时视频通话
+- 语音通话
+- 音频消息
+- 视频消息
 
-## 项目结构
+### 文件管理
+- 文件上传与分享
+- 文件预览
+- 在线文档协作
 
+### 好友系统
+- 好友添加与管理
+- 在线状态显示
+- 好友分组
+
+### 其他特性
+- 实时通知
+- 消息提醒
+- 主题切换
+- 多语言支持
+
+## 🛠️ 技术栈
+
+### 后端
+- Python 3.8+
+- Flask 框架
+- SQLAlchemy ORM
+- Socket.IO
+- Redis
+- JWT 认证
+- SQLite/MySQL 数据库
+
+### 前端
+- React 18
+- TypeScript
+- Material-UI
+- Socket.IO Client
+- React Router
+- WebRTC
+
+## 📦 安装部署
+
+### 环境要求
+- Python 3.8+
+- Node.js 14+
+- Redis 服务器
+- SSL 证书（用于HTTPS和WSS）
+
+### 后端部署
+1. 克隆项目并进入后端目录
+```bash
+git clone <repository-url>
+cd chat_platform/backend
 ```
-chat-website
-├── backend
-│   ├── src
-│   ├── requirements.txt
-│   └── README.md
-└── frontend
-    ├── src
-    ├── package.json
-    ├── tsconfig.json
-    └── README.md
+
+2. 创建并激活虚拟环境
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 ```
 
-## 安装和运行
+3. 安装依赖
+```bash
+pip install -r requirements.txt
+```
 
-1. 克隆项目：
-   ```
-   git clone <repository-url>
-   ```
+4. 配置环境变量
+```bash
+cp .env.example .env
+# 编辑 .env 文件配置必要的环境变量
+```
 
-2. 进入后端目录并安装依赖：
-   ```
-   cd backend
-   pip install -r requirements.txt
-   ```
+5. 运行服务器
+```bash
+python src/app.py
+```
 
-3. 运行后端：
-   ```
-   python src/app.py
-   ```
+### 前端部署
+1. 进入前端目录
+```bash
+cd chat_platform/frontend
+```
 
-4. 进入前端目录并安装依赖：
-   ```
-   cd frontend
-   npm install
-   ```
+2. 安装依赖
+```bash
+npm install
+```
 
-5. 运行前端：
-   ```
-   npm start
-   ```
+3. 配置环境变量
+```bash
+cp .env.example .env.local
+# 编辑 .env.local 配置API地址
+```
 
-## 贡献
+4. 运行开发服务器
+```bash
+npm start
+```
 
-欢迎任何形式的贡献！请提交问题或拉取请求。
+5. 构建生产版本
+```bash
+npm run build
+```
+
+## 🔧 配置说明
+
+### 后端配置
+- `PORT`: 服务器端口（默认5000）
+- `DATABASE_URL`: 数据库连接URL
+- `REDIS_URL`: Redis连接URL
+- `JWT_SECRET_KEY`: JWT密钥
+- `UPLOAD_FOLDER`: 文件上传目录
+- `SSL_CERT_PATH`: SSL证书路径
+- `SSL_KEY_PATH`: SSL密钥路径
+
+### 前端配置
+- `REACT_APP_API_URL`: 后端API地址
+- `REACT_APP_SOCKET_URL`: WebSocket服务器地址
+- `REACT_APP_PUBLIC_URL`: 静态资源路径
+
+## 📝 开发指南
+
+### 代码规范
+- 遵循PEP 8 Python代码规范
+- 使用ESLint和Prettier进行前端代码格式化
+- 提交前进行代码检查
+
+### 分支管理
+- `main`: 主分支，保持稳定
+- `develop`: 开发分支
+- `feature/*`: 新功能分支
+- `bugfix/*`: 问题修复分支
+
+## 🤝 贡献指南
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交改动 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
+
+## 📄 许可证
+
+该项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件

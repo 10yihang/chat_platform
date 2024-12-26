@@ -26,23 +26,16 @@ Doubao_Client = Ark(
 
 AI_PROMPT = '''
 你的任务根据聊天记录模仿要回复的人的语气进行一个模拟的回复。
-
 请注意，你的回复应该是一个合理的、有逻辑的回答，而不是随机的或无意义的回答。
-
-你当前需要建议回复的人是：{}
-
+你当前需要建议回复的人是：用户{}
 以下是聊天记录：
 
 {}
 
 在模仿语气进行模拟回复时：
-
 1. 仔细观察聊天记录中对方的用词、句式和风格。
-
 2. 尽量使用相似的语言风格和表达方式。
-
 3. 只需要对当前需要回复的人做出模拟回复即可
-
 请给出模拟回复。
 
 '''
@@ -56,10 +49,18 @@ def suggest_stream():
 
     messages = data.get('messages', [])
     current_user_id = data.get('current_user_id')
+    model_name = data.get('model', 'doubao') 
+    
+    # 修改模型选择逻辑
     try:
-        choose_model = AIModel[data.get('model').upper()]
+        # 将模型名称转换为枚举值
+        if model_name.lower() == 'gemini':
+            choose_model = AIModel.GEMINI
+        else:
+            choose_model = AIModel.DOUBAO
+        print(f'Selected model: {choose_model}, Original model name: {model_name}')
     except KeyError:
-        print(f"Invalid model: {data.get('model')}")
+        print(f"Invalid model: {model_name}")
         return jsonify({"error": "Invalid model"}), 400
 
     if not current_user_id:
@@ -75,12 +76,13 @@ def suggest_stream():
             sender = message.get('sender_id')
             content = message.get('content')
             if sender and content:
-                conversation.append(f'{sender}: {content}')
+                conversation.append(f'用户{sender}: {content}')
             else:
                 print(f"Invalid message format: {message}") 
                 continue
 
         prompt = AI_PROMPT.format(current_user_id, '\n'.join(conversation))
+        # print(prompt)
         try:
             # 直接返回stream，不要提前遍历
             return Doubao_Client.chat.completions.create(
@@ -98,7 +100,7 @@ def suggest_stream():
             sender = message.get('sender_id')
             content = message.get('content')
             if sender and content:
-                conversation.append(f'{sender}: {content}')
+                conversation.append(f'用户{sender}: {content}')
             else:
                 print(f"Invalid message format: {message}") 
                 continue

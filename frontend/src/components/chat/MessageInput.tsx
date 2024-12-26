@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Box, TextField, IconButton, LinearProgress, Typography, Stack, Collapse, Tooltip } from '@mui/material';
+import { Box, TextField, IconButton, LinearProgress, Typography, Stack, Collapse, Tooltip, Select, MenuItem } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import CreateIcon from '@mui/icons-material/Create';
 import FileUploader from './FileUploader';
@@ -21,7 +21,7 @@ interface MessageInputProps {
     friendId?: string;
     groupId?: string;
     channelId?: string;
-    onRequestAiSuggestion?: () => void; 
+    onRequestAiSuggestion?: (model: string) => void; 
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -39,6 +39,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const [newMessage, setNewMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showTools, setShowTools] = useState(false);
+    const [selectedModel, setSelectedModel] = useState('doubao'); // 默认使用doubao模型
 
     const handleUploadProgress = (uploading: boolean, progress: number) => {
         setIsUploading(uploading);
@@ -60,7 +61,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     };
 
     const ToolButtons = () => (
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
             <Tooltip title="表情">
                 <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
                     <EmojiEmotionsIcon />
@@ -72,7 +73,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 </IconButton>
             </Tooltip>
             <Tooltip title="AI建议">
-                <IconButton onClick={onRequestAiSuggestion} color="primary">
+                <IconButton onClick={handleRequestAiSuggestion} color="primary">
                     <SmartToyIcon />
                 </IconButton>
             </Tooltip>
@@ -104,8 +105,44 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     />
                 </Box>
             </Tooltip>
+            <Tooltip title="选择AI模型">
+                <Select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    size="small"
+                    sx={{
+                        height: '32px',
+                        minWidth: '120px',
+                        '.MuiSelect-select': {
+                            py: 0.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                        }
+                    }}
+                >
+                    <MenuItem value="doubao">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>豆包</span>
+                        </Stack>
+                    </MenuItem>
+                    <MenuItem value="gemini">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>Gemini</span>
+                        </Stack>
+                    </MenuItem>
+                </Select>
+            </Tooltip>
         </Stack>
     );
+
+    const handleRequestAiSuggestion = () => {
+        if (onRequestAiSuggestion) {
+            console.log('Requesting AI suggestion with model:', selectedModel);
+            onRequestAiSuggestion(selectedModel);
+        }
+    };
 
     return (
         <InputContainer>
