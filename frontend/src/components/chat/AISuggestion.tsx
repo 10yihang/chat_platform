@@ -9,16 +9,21 @@ export interface AISuggestionProps {
   messages: any[];
   onSend: (text: string) => void;
   onClose: () => void;
+  model?: string; // 添加model参数
 }
 
 const AISuggestion: React.FC<AISuggestionProps> = ({ 
   messages, 
   onSend,
-  onClose 
+  onClose,
+  model = 'doubao' // 默认使用doubao
 }) => {
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState('');
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 30000; // 30秒超时
 
   useEffect(() => {
     if (!messages.length) return;
@@ -36,28 +41,40 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
 
   const fetchAiSuggestion = async () => {
     try {
+      console.log('Fetching AI suggestion with model:', model);
       setLoading(true);
       setSuggestion('');
+      
+      // 创建超时Promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), TIMEOUT_MS);
+      });
+
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
       abortControllerRef.current = new AbortController();
 
       console.log('Fetching AI suggestion...');
-      const response = await fetch(`${global.preUrl}/api/ai/suggest/stream`, {
+      const requestBody = {
+        messages: messages.slice(Math.max(-messages.length, -15)),
+        current_user_id: localStorage.getItem('userId'),
+        model: model
+      };
+      console.log('Request body:', requestBody);
+
+      const fetchPromise = fetch(`${global.preUrl}/api/ai/suggest/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
-          messages: messages.slice(Math.max(-messages.length, -15)),
-          current_user_id: localStorage.getItem('userId'),
-          // model: 'Gemini',
-          model: 'doubao'
-        }),
+        body: JSON.stringify(requestBody),
         signal: abortControllerRef.current.signal,
       });
+
+      // 使用Promise.race进行超时控制
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
 
       if (!response.ok) {
         console.error('Response not OK:', response.status);
@@ -102,11 +119,24 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
           }
         }
       }
+      
+      setRetryCount(0); // 成功后重置重试次数
     } catch (error: any) {
       if (error.name === 'AbortError') {
         return;
       }
+      
       console.error('获取AI建议失败:', error);
+      
+      // 处理重试逻辑
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        message.info(`正在重试 (${retryCount + 1}/${MAX_RETRIES})...`);
+        setTimeout(fetchAiSuggestion, 1000); // 1秒后重试
+      } else {
+        message.error('获取AI建议失败，请稍后重试');
+        onClose();
+      }
     } finally {
       setLoading(false);
     }
@@ -130,42 +160,22 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
       }}
     >
       <Stack direction="row" spacing={1}>
-        {loading ? (
-          <>
-            <Chip
-              icon={<CircularProgress size={16} />}
-              label="AI正在思考..."
-              variant="outlined"
-            />
-            <Chip
-              icon={<CancelIcon />}
-              label="取消"
-              onClick={onClose}
-              variant="outlined"
-              color="error"
-              clickable
-            />
-          </>
-        ) : (
-          <>
-            <Chip
-              icon={<SmartToyIcon />}
-              label={suggestion || '正在思考中...'}
-              onClick={() => suggestion && onSend(suggestion)}
-              variant="outlined"
-              clickable
-              color="primary"
-            />
-            <Chip
-              icon={<CancelIcon />}
-              label="关闭"
-              onClick={onClose}
-              variant="outlined"
-              color="error"
-              clickable
-            />
-          </>
-        )}
+        <Chip
+          icon={loading ? <CircularProgress size={16} /> : <SmartToyIcon />}
+          label={loading ? "AI正在思考..." : (suggestion || '正在思考中...')}
+          onClick={() => !loading && suggestion && onSend(suggestion)}
+          variant="outlined"
+          clickable={!loading && !!suggestion}
+          color="primary"
+        />
+        <Chip
+          icon={<CancelIcon />}
+          label="关闭"
+          onClick={onClose}
+          variant="outlined"
+          color="error"
+          clickable
+        />
       </Stack>
     </Box>
   );
