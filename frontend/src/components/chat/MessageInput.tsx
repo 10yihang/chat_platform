@@ -138,6 +138,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             <span>DeepSeek</span>
                         </Stack>
                     </MenuItem>
+                    <MenuItem value="grok">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>Grok2</span>
+                        </Stack>
+                    </MenuItem>
                 </Select>
             </Tooltip>
         </Stack>
