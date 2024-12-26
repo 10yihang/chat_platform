@@ -275,9 +275,3 @@ def receive_messages(user_id):
     chat_service = ChatService()
     messages = chat_service.get_messages(user_id)
     return jsonify([message.to_dict() for message in messages]), 200
-
-@chat_bp.route('/history/<user1_id>/<user2_id>', methods=['GET'])
-def get_chat_history(user1_id, user2_id):
-    chat_service = ChatService()
-    messages = chat_service.get_chat_history(user1_id, user2_id)
-    return jsonify([message.to_dict() for message in messages]), 200
