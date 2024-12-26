@@ -6,8 +6,17 @@ import os
 from openai import OpenAI
 from volcenginesdkarkruntime import Ark
 from dotenv import load_dotenv
+import textwrap
+from enum import Enum
+import google.generativeai as genai
+
+class AIModel(Enum):
+    DOUBAO = 1
+    GEMINI = 2
 
 load_dotenv()
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+genai.configure(api_key=GOOGLE_API_KEY)
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -47,13 +56,20 @@ def suggest_stream():
 
     messages = data.get('messages', [])
     current_user_id = data.get('current_user_id')
+    try:
+        choose_model = AIModel[data.get('model').upper()]
+    except KeyError:
+        print(f"Invalid model: {data.get('model')}")
+        return jsonify({"error": "Invalid model"}), 400
 
     if not current_user_id:
         return jsonify({"error": "current_user_id is required"}), 400
     if not messages:
         return jsonify({"error": "messages is required"}), 400
+    
+    
 
-    def get_ai_response(messages, current_user_id):
+    def get_Doubao_response(messages, current_user_id):
         conversation = []
         for message in messages:
             sender = message.get('sender_id')
@@ -75,9 +91,27 @@ def suggest_stream():
         except Exception as e:
             print(f"Error calling Doubao API: {e}")
             return None
+        
+    def get_Gemini_response(messages, current_user_id):
+        conversation = []
+        for message in messages:
+            sender = message.get('sender_id')
+            content = message.get('content')
+            if sender and content:
+                conversation.append(f'{sender}: {content}')
+            else:
+                print(f"Invalid message format: {message}") 
+                continue
+        prompt = AI_PROMPT.format(current_user_id, '\n'.join(conversation))
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            return model.generate_content(prompt, stream=True)
+        except Exception as e:
+            print(f"Error calling Gemini API: {e}")
+            return None
 
-    def generate():
-        stream = get_ai_response(messages, current_user_id)
+    def Doubao_generate():
+        stream = get_Doubao_response(messages, current_user_id)
         if stream is None:
             yield f"data: {json.dumps({'error': 'Failed to get AI response'})}\n\n"
             return
@@ -91,8 +125,24 @@ def suggest_stream():
         except Exception as e:
             print(f"Error processing stream: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    def Gemeni_generate():
+        stream = get_Gemini_response(messages, current_user_id)
+        if stream is None:
+            yield f"data: {json.dumps({'error': 'Failed to get AI response'})}\n\n"
+            return
+        
+        try:
+            for chunk in stream:
+                content = chunk.text
+                # print(f"Sending content: {content}")
+                yield f"data: {json.dumps({'content': content})}\n\n"
+        except Exception as e:
+            print(f"Error processing stream: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return Response(
-        stream_with_context(generate()),
+        # stream_with_context(Doubao_generate()),
+        stream_with_context(Doubao_generate()) if choose_model == AIModel.DOUBAO else stream_with_context(Gemeni_generate()),
         mimetype='text/event-stream'
     )

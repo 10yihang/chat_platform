@@ -3,6 +3,7 @@ import { Chip, Box, CircularProgress, Stack } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { motion } from 'framer-motion';
+import { message } from 'antd';
 
 export interface AISuggestionProps {
   messages: any[];
@@ -21,14 +22,16 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
 
   useEffect(() => {
     if (!messages.length) return;
-    // 发起 AI 请求
+    
+    // 获取最后一条消息
+    const lastMessage = messages[messages.length - 1];
+    // 如果最后一条消息是自己发的，则不提供建议
+    if (lastMessage.sender_id.toString() === localStorage.getItem('userId')) {
+      setSuggestion('等待对方回复...');
+      return;
+    }
+    
     fetchAiSuggestion();
-    // 移除 abort 调用，允许请求继续执行
-    // return () => {
-    //   if (abortControllerRef.current) {
-    //     abortControllerRef.current.abort();
-    //   }
-    // };
   }, [messages]);
 
   const fetchAiSuggestion = async () => {
@@ -50,12 +53,14 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
         body: JSON.stringify({
           messages: messages.slice(Math.max(-messages.length, -15)),
           current_user_id: localStorage.getItem('userId'),
+          model: 'Gemini',
         }),
         signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
         console.error('Response not OK:', response.status);
+        message.error('获取AI建议失败');
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 

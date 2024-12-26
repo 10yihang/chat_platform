@@ -14,6 +14,7 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     status = db.Column(db.String(20), default='sent')
     file_url = db.Column(db.String(255))
+    is_read = db.Column(db.Boolean, default=False)
 
     def __init__(self, sender_id, receiver_id = 0, group_id = 0, content = '', type = 'text', file_url = '', status = 'sent', sender_name = ''):
         self.sender_id = sender_id
