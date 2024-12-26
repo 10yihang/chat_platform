@@ -46,7 +46,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('email', data.email);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('IsGuest', 'false');
-        localStorage.setItem('userName', data.username);
         onLogin(isGuest);
       } else {
         setError(data.message || '登录失败');
@@ -60,11 +59,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     console.log('登录信息:', { email, password });
   };
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     if (username) {
       localStorage.setItem('IsGuest', 'true');
       localStorage.setItem('guestName', username);
-      onLogin(true);
+      try {
+        const response = await fetch(preUrl + '/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: '',
+            password: '',
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          console.log(data.userId);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('username', username);
+          localStorage.setItem('email', data.email);
+          localStorage.setItem('userId', data.userId);
+          localStorage.setItem('IsGuest', 'false');
+          onLogin(isGuest);
+        } else {
+          setError(data.message || '登录失败');
+        }
+      } catch (err) {
+        setError('网络错误，请稍后重试');
+      } finally {
+        setLoginLoading(false);
+      }
     }
   };
 

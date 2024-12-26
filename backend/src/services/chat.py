@@ -259,14 +259,11 @@ class ChatService:
             'iat': datetime.utcnow(),  
             'sub': str(user_id)  
         }
-        token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
         try:
-            decode_token = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
-            print(f'解码后的token: {decode_token}')
-            print(f'user_id: {decode_token.get("user_id")}')
+            token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
+            return token
         except:
             return '生成token失败'
-        return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
 
 chat_bp = Blueprint('chat', __name__)
 

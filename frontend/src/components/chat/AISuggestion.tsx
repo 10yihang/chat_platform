@@ -1,5 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Chip, Box, CircularProgress, Stack } from '@mui/material';
+import { 
+  Chip, 
+  Box, 
+  CircularProgress, 
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography
+} from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { motion } from 'framer-motion';
@@ -23,29 +34,36 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
-  const TIMEOUT_MS = 30000; // 30秒超时
+  const TIMEOUT_MS = 10000; 
+  const [openDialog, setOpenDialog] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
     if (!messages.length) return;
     
-    // 获取最后一条消息
     const lastMessage = messages[messages.length - 1];
-    // 如果最后一条消息是自己发的，则不提供建议
     if (lastMessage.sender_id.toString() === localStorage.getItem('userId')) {
       setSuggestion('等待对方回复...');
       return;
     }
     
     fetchAiSuggestion();
-  }, [messages]);
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [messages.length]); // 只在消息数量变化时触发
 
   const fetchAiSuggestion = async () => {
+    if (isRequesting) return; // 防止重复请求
+    setIsRequesting(true);
     try {
       console.log('Fetching AI suggestion with model:', model);
       setLoading(true);
       setSuggestion('');
       
-      // 创建超时Promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('请求超时')), TIMEOUT_MS);
       });
@@ -73,7 +91,7 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
         signal: abortControllerRef.current.signal,
       });
 
-      // 使用Promise.race进行超时控制
+
       const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
 
       if (!response.ok) {
@@ -128,56 +146,113 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
       
       console.error('获取AI建议失败:', error);
       
-      // 处理重试逻辑
       if (retryCount < MAX_RETRIES) {
         setRetryCount(prev => prev + 1);
         message.info(`正在重试 (${retryCount + 1}/${MAX_RETRIES})...`);
-        setTimeout(fetchAiSuggestion, 1000); // 1秒后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 指数退避
+        // return; // 使用return确保不会继续执行
       } else {
         message.error('获取AI建议失败，请稍后重试');
         onClose();
       }
     } finally {
-      setLoading(false);
+      setLoading(false); 
+      setIsRequesting(false);
     }
+  };
+
+  const handleChipClick = () => {
+    if (!loading && suggestion) {
+      setOpenDialog(true);
+    }
+  };
+
+  const handleSendAndClose = () => {
+    onSend(suggestion);
+    setOpenDialog(false);
+  };
+
+  const getPreviewText = (text: string) => {
+    if (loading) return "AI正在思考...";
+    if (!text) return '正在准备中...';
+    const maxLength = 50;
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
   };
 
   if (!messages.length) return null;
 
   return (
-    <Box 
-      component={motion.div}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      sx={{ 
-        display: 'flex', 
-        justifyContent: 'center',
-        p: 1,
-        position: 'relative',
-        top: -1,
-        backgroundColor: '#fff',
-        borderTop: '1px solid rgba(0, 0, 0, 0.12)'
-      }}
-    >
-      <Stack direction="row" spacing={1}>
-        <Chip
-          icon={loading ? <CircularProgress size={16} /> : <SmartToyIcon />}
-          label={loading ? "AI正在思考..." : (suggestion || '正在思考中...')}
-          onClick={() => !loading && suggestion && onSend(suggestion)}
-          variant="outlined"
-          clickable={!loading && !!suggestion}
-          color="primary"
-        />
-        <Chip
-          icon={<CancelIcon />}
-          label="关闭"
-          onClick={onClose}
-          variant="outlined"
-          color="error"
-          clickable
-        />
-      </Stack>
-    </Box>
+    <>
+      <Box 
+        component={motion.div}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          p: 1,
+          position: 'relative',
+          top: -1,
+          backgroundColor: '#fff',
+          borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ width: 'auto' }}>
+          <Chip
+            icon={loading ? <CircularProgress size={16} /> : <SmartToyIcon />}
+            label={getPreviewText(suggestion)}
+            onClick={handleChipClick}
+            variant="outlined"
+            clickable={!loading && !!suggestion}
+            color="primary"
+            sx={{
+              maxWidth: {
+                xs: 280, 
+                sm: 400, 
+                md: 500  
+              },
+              height: 'auto',
+              '& .MuiChip-label': {
+                whiteSpace: 'normal',
+                padding: '8px 8px'
+              }
+            }}
+          />
+          <Chip
+            icon={<CancelIcon />}
+            label="关闭"
+            onClick={onClose}
+            variant="outlined"
+            color="error"
+            clickable
+          />
+        </Stack>
+      </Box>
+
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          完整AI建议
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+            {suggestion}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>
+            取消
+          </Button>
+          <Button onClick={handleSendAndClose} color="primary" variant="contained">
+            发送此回复
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
