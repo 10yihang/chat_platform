@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from services.chat import ChatService
 from models.message import Message
+from models.user import User
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from extensions import db
 
 chat_bp = Blueprint('chat', __name__)
 chat_service = ChatService()
@@ -73,5 +75,39 @@ def get_history():
         messages.reverse()
         return jsonify([msg.to_dict() for msg in messages]), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/messages/read/<int:chat_id>', methods=['POST'])
+@jwt_required()
+def mark_messages_read(chat_id):
+    try:
+        current_user = User.query.get(get_jwt_identity())
+        Message.query.filter(
+            Message.receiver_id == current_user.id,
+            (Message.sender_id == chat_id) | (Message.group_id == chat_id),
+            (Message.is_read == False or Message.is_read == None)
+        ).update({Message.is_read: True})
+        db.session.commit()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        print('error', str(e))
+        return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/messages/unread/count', methods=['GET'])
+@jwt_required()
+def get_unread_counts():
+    try:
+        current_user = User.query.get(get_jwt_identity())
+        unread_counts = db.session.query(
+            Message.sender_id,
+            db.func.count(Message.id)
+        ).filter(
+            Message.receiver_id == current_user.id,
+            Message.is_read == False
+        ).group_by(Message.sender_id).all()
+        
+        return jsonify({str(sender_id): count for sender_id, count in unread_counts}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
