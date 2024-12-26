@@ -53,7 +53,8 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
         body: JSON.stringify({
           messages: messages.slice(Math.max(-messages.length, -15)),
           current_user_id: localStorage.getItem('userId'),
-          model: 'Gemini',
+          // model: 'Gemini',
+          model: 'doubao'
         }),
         signal: abortControllerRef.current.signal,
       });
