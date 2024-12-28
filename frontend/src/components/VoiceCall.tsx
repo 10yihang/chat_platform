@@ -375,8 +375,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({ friendId, userName }) => {
         <Paper
           sx={{
             position: 'fixed',
-            right: 20,
-            bottom: 20,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
             zIndex: 1300,
             width: 300,
             borderRadius: 2,

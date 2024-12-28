@@ -51,8 +51,9 @@ export const useChat = (socket: Socket | null, roomId: string | string[], channe
     const sendMessage = async (content: string) => {
         if (!content.trim()) return;
 
-        if ((!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined') && 
-            localStorage.getItem('IsGuest') !== 'true') {
+        if ((!localStorage.getItem('userId') || localStorage.getItem('userId') === 'undefined')
+            //  && localStorage.getItem('IsGuest') !== 'true') {
+        ){
             throw new Error('请先登录');
         }
 

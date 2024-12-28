@@ -28,9 +28,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
     const { chatRoomId, whiteBoardRoomId } = useRoomId(channelId, groupId, friendId);
     const { messages, sendMessage } = useChat(socket, chatRoomId, channelId, groupId, friendId);
     const [showAiSuggestion, setShowAiSuggestion] = useState(false);
-    const [selectedModel, setSelectedModel] = useState('doubao');  
-
-    // console.log(channelId, groupId, friendId);
+    const [selectedModel, setSelectedModel] = useState('doubao');
 
     const handleSendMessage = async (content: string) => {
         try {
@@ -78,7 +76,7 @@ const Chat: React.FC<ChatProps> = ({ channelId, groupId, friendId, avatar }) => 
                     messages={messages}
                     onSend={handleSendMessage}
                     onClose={() => setShowAiSuggestion(false)}
-                    model={selectedModel}  // 使用选中的模型
+                    model={selectedModel} 
                 />
             )}
 

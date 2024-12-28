@@ -42,7 +42,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isown, avatar, o
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const videoExts = ['mp4', 'webm', 'ogg'];
     const musicExts = ['mp3', 'wav', 'flac', 'ape', 'alac'];
-    const textExts = ['txt', 'html', 'css', 'js', 'json', 'md', 'py', 'c', 'cpp'];
+    const textExts = ['txt', 'html', 'css', 'js', 'json', 'md', 'py', 'c', 'cpp', 'log', 'md'];
 
     if (imageExts.includes(ext)) return 'image';
     if (videoExts.includes(ext)) return 'video';
