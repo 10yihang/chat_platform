@@ -14,6 +14,8 @@ import Settings from './pages/Settings';
 import { Box, CircularProgress } from '@mui/material';
 import SocketProvider, { useSocketContext } from './contexts/SocketContextProvider';
 import theme from './theme/theme';
+import Footer from './components/Footer';
+import Introduction from './pages/Introduction';
 
 declare global {
   var preUrl: string;
@@ -95,25 +97,28 @@ const App: React.FC = () => {
           </Routes>
         ) : (
           <SocketProvider>
-            <Layout onLogout={handleLogout}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/chat/group/1" replace />} />
-                <Route path="/chat" element={<Navigate to="/chat/group/1" replace />} />
-                <Route path="/chat/group/:id" element={<ChatApp />} />
-                <Route path="/chat/friend/:id" element={<ChatApp />} />
-                {!isGuest && (
-                  <>
-                    {/* <Route path="/chat/:id" element={<ChatApp />} /> */}
-                    <Route path="/friends" element={<FriendList />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </>
-                )}
-                <Route path="/channel" element={<PublicChannel />} />
-                {/* <Route path="/video-call/:id" element={<VideoCall />} /> */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
+            <Box sx={{ pb: 8 }}> {/* 添加底部padding以防止内容被页脚遮挡 */}
+              <Layout onLogout={handleLogout}>
+                <Routes>
+                  <Route path="/" element={<Introduction />} />
+                  <Route path="/chat" element={<Navigate to="/chat/group/1" replace />} />
+                  <Route path="/chat/group/:id" element={<ChatApp />} />
+                  <Route path="/chat/friend/:id" element={<ChatApp />} />
+                  {!isGuest && (
+                    <>
+                      {/* <Route path="/chat/:id" element={<ChatApp />} /> */}
+                      <Route path="/friends" element={<FriendList />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </>
+                  )}
+                  <Route path="/channel" element={<PublicChannel />} />
+                  {/* <Route path="/video-call/:id" element={<VideoCall />} /> */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Layout>
+              <Footer />
+            </Box>
           </SocketProvider>
         )}
       </Router>
