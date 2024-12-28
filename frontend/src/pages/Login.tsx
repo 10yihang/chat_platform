@@ -42,7 +42,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('username', data.username);
+        localStorage.setItem('userName', data.username);
         localStorage.setItem('email', data.email);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('IsGuest', 'false');
@@ -63,35 +63,35 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     if (username) {
       localStorage.setItem('IsGuest', 'true');
       localStorage.setItem('guestName', username);
-      try {
-        const response = await fetch(preUrl + '/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: '',
-            password: '',
-          }),
-        });
+      setLoginLoading(true);
+    try {
+      const response = await fetch(preUrl + '/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: '',
+          password: '',
+        }),
+      });
 
-        const data = await response.json();
-        if (response.ok) {
-          console.log(data.userId);
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('username', username);
-          localStorage.setItem('email', data.email);
-          localStorage.setItem('userId', data.userId);
-          localStorage.setItem('IsGuest', 'false');
-          onLogin(isGuest);
-        } else {
-          setError(data.message || '登录失败');
-        }
-      } catch (err) {
-        setError('网络错误，请稍后重试');
-      } finally {
-        setLoginLoading(false);
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userName', username);
+        // localStorage.setItem('email', data.email);
+        localStorage.setItem('userId', '0');
+        localStorage.setItem('IsGuest', 'true');
+        onLogin(isGuest);
+      } else {
+        setError(data.message || '登录失败');
       }
+    } catch (err) {
+      setError('网络错误，请稍后重试');
+    } finally {
+      setLoginLoading(false);
+    }
     }
   };
 
@@ -174,10 +174,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </>
             ) : (
               <>
-                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
+                <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
                 <TextField label="密码" type="password" fullWidth onChange={(e) => setPassword(e.target.value)} />
                 <TextField label="确认密码" type="password" fullWidth onChange={(e) => setConfirmPassword(e.target.value)} />
-                <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
+                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
                 <Button variant="contained" fullWidth onClick={handleRegister}>
                   {registerLoading ? <CircularProgress size={24} /> : '注册'}
                 </Button>

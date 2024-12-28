@@ -138,68 +138,6 @@ class ChatService:
             print(f"处理消息错误: {str(e)}")
             emit('error', {'msg': str(e)})
             return False
-    
-    # def handle_file_message(self, data):
-    #     try:
-    #         UPLOAD_FOLDER = Config.UPLOAD_FOLDER
-
-    #         message = data.get('message', {})
-    #         file_data = data.get('file')
-            
-    #         if not file_data or not isinstance(file_data, dict):
-    #             raise Exception('未提供文件或文件格式错误')
-                
-    #         sender = User.query.get(message.get('sender_id'))
-    #         if not sender:
-    #             raise Exception('发送者不存在')
-
-    #         # 生成唯一文件名
-    #         filename = secure_filename(file_data.get('name', ''))
-    #         unique_filename = f'{sender.id}_{int(time.time())}_{filename}'
-
-    #         # 确保上传目录存在
-    #         if not os.path.exists(UPLOAD_FOLDER):
-    #             os.makedirs(UPLOAD_FOLDER)
-
-    #         # 保存文件
-    #         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-    #         with open(file_path, 'wb') as f:
-    #             binary_data = bytes(file_data.get('data', []))
-    #             f.write(binary_data)
-
-    #         file_url = f'/uploads/{unique_filename}'
-
-    #         new_message = Message(
-    #             sender_id=message.get('sender_id'),
-    #             receiver_id=message.get('receiver_id', 0),
-    #             group_id=message.get('group_id', 0),
-    #             content=message.get('content'),
-    #             type='file',
-    #             sender_name=sender.username,
-    #             file_url=file_url
-    #         )
-            
-    #         new_message.save()
-            
-    #         # 发送消息通知
-    #         emit('message', {
-    #             'id': new_message.id,
-    #             'sender_id': new_message.sender_id,
-    #             'receiver_id': new_message.receiver_id,
-    #             'group_id': new_message.group_id,
-    #             'content': new_message.content,
-    #             'type': 'file',
-    #             'sender_name': sender.username,
-    #             'created_at': new_message.created_at.isoformat(),
-    #             'file_url': file_url
-    #         }, room=message.get('room'))
-            
-    #         return True
-            
-    #     except Exception as e:
-    #         print(f"处理文件错误: {str(e)}")
-    #         emit('error', {'msg': str(e)})
-    #         return False
         
     def handle_emoji_message(self, data):
         return self.handle_message(data)
