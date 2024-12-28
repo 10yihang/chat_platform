@@ -77,7 +77,7 @@ tips: 时间紧，仍有许多bug，主要是为了完成python大作业
 ### 后端部署
 1. 克隆项目并进入后端目录
 ```bash
-git clone <repository-url>
+git clone https://github.com/10yihang/chat_platform.git
 cd chat_platform/backend
 ```
 
