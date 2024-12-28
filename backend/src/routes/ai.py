@@ -15,11 +15,13 @@ class AIModel(Enum):
     GEMINI = 2
     DEEPSEEK = 3
     GROK = 4
+    GROK = 4
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 DEEP_API_KEY = os.getenv('DEEP_API_KEY')
+GROK_API_KEY = os.getenv('GROK_API_KEY')
 GROK_API_KEY = os.getenv('GROK_API_KEY')
 
 ai_bp = Blueprint('ai', __name__)
@@ -31,6 +33,11 @@ Doubao_Client = Ark(
 Deep_SeeK_Client = OpenAI(
     api_key=DEEP_API_KEY,
     base_url="https://api.deepseek.com",
+)
+
+Grok_Client = OpenAI(
+    api_key = GROK_API_KEY,
+    base_url = "https://api.x.ai/v1"
 )
 
 Grok_Client = OpenAI(
@@ -67,25 +74,7 @@ def suggest_stream():
     messages = data.get('messages', [])
     current_user_id = data.get('current_user_id')
     model_name = data.get('model', 'doubao') 
-    
-    try:
-        if model_name.upper() == 'DOUBAO':
-            choose_model = AIModel.DOUBAO
-        elif model_name.upper() == 'GEMINI':
-            choose_model = AIModel.GEMINI
-        elif model_name.upper() == 'DEEPSEEK':
-            choose_model = AIModel.DEEPSEEK
-        elif model_name.upper() == 'GROK':  # 添加Grok模型判断
-            choose_model = AIModel.GROK
-        else:
-            print(f"Invalid model name: {model_name}")
-            return jsonify({"error": "Invalid model name"}), 400
-            
-        print(f'Selected model: {choose_model}, Original model name: {model_name}')
-    except KeyError:
-        print(f"Invalid model: {model_name}")
-        return jsonify({"error": "Invalid model"}), 400
-    
+
     conversation = []
     for message in messages:
         sender = message.get('sender_id')
@@ -95,26 +84,36 @@ def suggest_stream():
         else:
             print(f"Invalid message format: {message}") 
             continue
-
     prompt = AI_PROMPT.format(current_user_id, '\n'.join(conversation))
-
-    # print(f"Current user ID: {current_user_id}")
+    
+    try:
+        if model_name.upper() == 'GEMINI':
+            choose_model = AIModel.GEMINI
+        elif model_name.upper() == 'DOUBAO':
+            choose_model = AIModel.DOUBAO
+        elif model_name.upper() == 'GROK':
+            choose_model = AIModel.GROK
+        elif model_name.upper() == 'DEEPSEEK':
+            choose_model = AIModel.DEEPSEEK
+        print(f'Selected model: {choose_model}, Original model name: {model_name}')
+    except KeyError:
+        print(f"Invalid model: {model_name}")
+        return jsonify({"error": "Invalid model"}), 400
 
     if not current_user_id:
-        print("current_user_id is required")
         return jsonify({"error": "current_user_id is required"}), 400
     if not messages:
-        print("messages is required")
         return jsonify({"error": "messages is required"}), 400
     
+    
+
     def get_Doubao_response():
+        # print(prompt)
         try:
             return Doubao_Client.chat.completions.create(
                 model="ep-20241225132124-f9dn8",
-                messages=[
-                    {"role": "system", "content": "你是一个有帮助的AI助手"},
-                    {"role": "user", "content": prompt}
-                ],
+                messages=[{"role": "system", "content": "你是一个聊天助手，你现在正在给用户提供回复建议。"},
+                          {"role": "user", "content": prompt}],
                 stream=True
             )
         except Exception as e:
@@ -133,29 +132,24 @@ def suggest_stream():
         try:
             return Deep_SeeK_Client.chat.completions.create(
                 model = "deepseek-chat",
-                messages=[
-                          {"role": "system", "content": "你是一个有帮助的AI助手"},
-                    {"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": "你是一个聊天助手，你现在正在给用户提供回复建议。"},
+                          {"role": "user", "content": prompt}],
                 stream=True
             )
         except Exception as e:
             print(f"Error calling DeepSeek API: {e}")
             return None
-    
+        
     def get_Grok_response():
         try:
             return Grok_Client.chat.completions.create(
-                model="grok-2",
-                messages=[
-                    {"role": "system", "content": "你是一个有帮助的AI助手"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=True,
-                max_tokens=2000,
-                temperature=0.7
+                model = "grok-2-1212",
+                messages=[{"role": "system", "content": "你是一个聊天助手，你现在正在给用户提供回复建议。"},
+                          {"role": "user", "content": prompt}],
+                stream=True
             )
         except Exception as e:
-            print(f"Error calling Grok API: {e}")
+            print(f"Error calling DeepSeek API: {e}")
             return None
 
     def Doubao_generate():
@@ -211,29 +205,27 @@ def suggest_stream():
             return
         try:
             for chunk in stream:
-                if hasattr(chunk.choices[0].delta, 'content') and chunk.choices[0].delta.content:
+                if chunk.choices and chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
+                    # print(f"Sending content: {content}")
                     yield f"data: {json.dumps({'content': content})}\n\n"
         except Exception as e:
-            print(f"Error processing Grok stream: {e}")
+            print(f"Error processing stream: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     def AI_generate():
         if choose_model == AIModel.DOUBAO:
-            print('Doubao模型')
-            yield from Doubao_generate()
+            for chunk in Doubao_generate():
+                yield chunk
         elif choose_model == AIModel.GEMINI:
-            print('Gemini模型')
-            yield from Gemeni_generate()
+            for chunk in Gemeni_generate():
+                yield chunk
         elif choose_model == AIModel.DEEPSEEK:
-            print('DeepSeek模型')
-            yield from DeepSeek_generate()
+            for chunk in DeepSeek_generate():
+                yield chunk
         elif choose_model == AIModel.GROK:
-            print('Grok模型')
-            yield from Grok_generate()
-        else:
-            print(f"Invalid model: {choose_model}")
-            yield f"data: {json.dumps({'error': 'Invalid model'})}\n\n"
+            for chunk in Grok_generate():
+                yield chunk
 
     return Response(
         stream_with_context(AI_generate()),
