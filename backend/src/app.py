@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from config import Config
-from extensions import db, socketio, redis_client
+from extensions import db, socketio, redis_client, logger
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.user import user_bp
@@ -66,9 +66,9 @@ if __name__ == '__main__':
     create_app(app)
     with app.app_context():
         db.create_all()
-    print('数据库初始化完成')
+    logger.info('数据库初始化完毕')
 
     ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     ssl_ctx.load_cert_chain(certfile='chat.yihang01.cn_bundle.crt', keyfile='chat.yihang01.cn.key')
 
-    socketio.run(app, debug=True, port=Config.PORT, host='0.0.0.0', ssl_context=ssl_ctx)
+    socketio.run(app, debug=False, port=Config.PORT, host='0.0.0.0', ssl_context=ssl_ctx)
