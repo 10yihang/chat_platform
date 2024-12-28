@@ -68,14 +68,14 @@ const Navigation: React.FC<NavigationProps> = ({ onLogout }) => {
           <NotificationsIcon />
         </Badge>
       </IconButton>
-      <Button color="inherit" component={RouterLink} to="/">
-        主页
-      </Button>
-      <Button color="inherit" component={RouterLink} to="/room">
+      <Button color="inherit" component={RouterLink} to="/chat">
         聊天室
       </Button>
       <Button color="inherit" component={RouterLink} to="/profile">
         个人资料
+      </Button>
+      <Button color="inherit" component={RouterLink} to="/">
+        简介
       </Button>
       <Button
         color="inherit"
