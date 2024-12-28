@@ -99,7 +99,26 @@ cp .env.example .env
 # 编辑 .env 文件配置必要的环境变量
 ```
 
-5. 运行服务器
+5. 初始化数据库
+```bash
+# 创建数据库
+mysql -u root -p
+CREATE DATABASE chat_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# 导入数据库结构
+mysql -u your_username -p chat_platform < backend/sql/create.sql
+
+# 配置数据库连接
+# 在 .env 文件中设置：
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_NAME=chat_platform
+```
+
+6. 运行服务器
 ```bash
 python src/app.py
 ```
