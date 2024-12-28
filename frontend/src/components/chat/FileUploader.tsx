@@ -36,15 +36,17 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     useEffect(() => {
         if (!socket) return;
 
-        const handleUploadProgress = (data: { fileId: string, progress: number }) => {
-            onUploadProgress(true, data.progress);
+        const handleUploadProgress = (data: { fileId: string, progress: number, room: string }) => {
+            if (data.room === messageData.room) {
+                onUploadProgress(true, data.progress);
+            }
         };
 
         socket.on('upload_progress', handleUploadProgress);
         return () => {
             socket.off('upload_progress', handleUploadProgress);
         };
-    }, [socket, onUploadProgress]);
+    }, [socket, onUploadProgress, messageData.room]);
 
     const updateUploadProgress = useCallback((received: number, total: number) => {
         const progress = (received / total) * 100;
@@ -160,7 +162,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                     fileSize: file.size,
                     totalChunks: totalChunksRef.current,
                     fileType: file.type,
-                    message: fileMessageData
+                    message: fileMessageData,
+                    room: messageData.room
                 });
 
                 setTimeout(() => {

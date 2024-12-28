@@ -103,14 +103,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     />
                 </Box>
             </Tooltip>
-            <Tooltip title="视频通话">
-                <Box component="span">
-                    <VideoCall
-                        friendId={friendId}
-                        userName={localStorage.getItem('userName') || ''}
-                        groupId={groupId}
-                    />
-                </Box>
+            <Tooltip title="视频通话（暂不可用）">
+                <span>  {/* 使用span替代Box以保持禁用状态的样式 */}
+                    <IconButton disabled sx={{ opacity: 0.5 }}>  {/* 添加disabled属性和透明度 */}
+                        <VideoCall
+                            friendId={friendId}
+                            userName={localStorage.getItem('userName') || ''}
+                            groupId={groupId}
+                        />
+                    </IconButton>
+                </span>
             </Tooltip>
             <Tooltip title="选择AI模型">
                 <Select
@@ -133,7 +135,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             <span>豆包</span>
                         </Stack>
                     </MenuItem>
-                    <MenuItem value="gemini">
+                    <MenuItem value="gemini" disabled>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <SmartToyIcon fontSize="small" />
                             <span>Gemini</span>
@@ -149,6 +151,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <Stack direction="row" spacing={1} alignItems="center">
                             <SmartToyIcon fontSize="small" />
                             <span>Grok2</span>
+                        </Stack>
+                    </MenuItem>
+                    <MenuItem value="Baidu" disabled>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>千帆</span>
                         </Stack>
                     </MenuItem>
                 </Select>

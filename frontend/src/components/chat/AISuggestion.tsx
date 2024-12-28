@@ -3,7 +3,7 @@ import {
   Chip, 
   Box, 
   CircularProgress, 
-  Stack,
+  Stack, 
   Dialog,
   DialogTitle,
   DialogContent,
@@ -34,9 +34,13 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
-  const TIMEOUT_MS = 10000; 
-  const [openDialog, setOpenDialog] = useState(false);
-  const [isRequesting, setIsRequesting] = useState(false);
+  const TIMEOUT_MS = 30000; // 30秒超时
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [fullSuggestion, setFullSuggestion] = useState('');
+
+  const truncateText = (text: string, maxLength: number = 50) => {
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  };
 
   useEffect(() => {
     if (!messages.length) return;
@@ -57,8 +61,7 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
   }, [messages.length]); // 只在消息数量变化时触发
 
   const fetchAiSuggestion = async () => {
-    if (isRequesting) return; // 防止重复请求
-    setIsRequesting(true);
+    let retryTimeout: NodeJS.Timeout;
     try {
       console.log('Fetching AI suggestion with model:', model);
       setLoading(true);
@@ -124,15 +127,18 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
               if (data.content) {
                 setSuggestion(prev => {
                   const newSuggestion = prev + data.content;
+                  setFullSuggestion(newSuggestion); // 保存完整建议
                   console.log('Updated suggestion:', newSuggestion);
                   return newSuggestion;
                 });
               }
               if (data.error) {
                 console.error('Error from server:', data.error);
+                throw new Error(data.error);
               }
             } catch (e) {
               console.error('解析数据失败:', e, 'Raw line:', line);
+              throw e; // 抛出错误以触发重试
             }
           }
         }
@@ -147,37 +153,32 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
       console.error('获取AI建议失败:', error);
       
       if (retryCount < MAX_RETRIES) {
-        setRetryCount(prev => prev + 1);
-        message.info(`正在重试 (${retryCount + 1}/${MAX_RETRIES})...`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 指数退避
-        // return; // 使用return确保不会继续执行
+        const nextRetryCount = retryCount + 1;
+        setRetryCount(nextRetryCount);
+        message.info(`正在重试 (${nextRetryCount}/${MAX_RETRIES})...`);
+        retryTimeout = setTimeout(fetchAiSuggestion, 1000); // 1秒后重试
       } else {
         message.error('获取AI建议失败，请稍后重试');
+        setRetryCount(0); // 重置重试计数
         onClose();
       }
     } finally {
-      setLoading(false); 
-      setIsRequesting(false);
+      setLoading(false);
+      return () => {
+        if (retryTimeout) clearTimeout(retryTimeout);
+      };
     }
   };
 
-  const handleChipClick = () => {
-    if (!loading && suggestion) {
-      setOpenDialog(true);
-    }
-  };
-
-  const handleSendAndClose = () => {
-    onSend(suggestion);
-    setOpenDialog(false);
-  };
-
-  const getPreviewText = (text: string) => {
-    if (loading) return "AI正在思考...";
-    if (!text) return '正在准备中...';
-    const maxLength = 50;
-    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
-  };
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      setRetryCount(0);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   if (!messages.length) return null;
 
@@ -197,26 +198,22 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
           borderTop: '1px solid rgba(0, 0, 0, 0.12)'
         }}
       >
-        <Stack direction="row" spacing={1} sx={{ width: 'auto' }}>
+        <Stack direction="row" spacing={1}>
           <Chip
             icon={loading ? <CircularProgress size={16} /> : <SmartToyIcon />}
-            label={getPreviewText(suggestion)}
-            onClick={handleChipClick}
+            label={loading ? "AI正在思考..." : (truncateText(suggestion) || '正在思考中...')}
+            onClick={() => {
+              if (!loading && suggestion) {
+                if (suggestion.length > 50) {
+                  setIsDialogOpen(true);
+                } else {
+                  onSend(suggestion);
+                }
+              }
+            }}
             variant="outlined"
             clickable={!loading && !!suggestion}
             color="primary"
-            sx={{
-              maxWidth: {
-                xs: 280, 
-                sm: 400, 
-                md: 500  
-              },
-              height: 'auto',
-              '& .MuiChip-label': {
-                whiteSpace: 'normal',
-                padding: '8px 8px'
-              }
-            }}
           />
           <Chip
             icon={<CancelIcon />}
@@ -230,25 +227,27 @@ const AISuggestion: React.FC<AISuggestionProps> = ({
       </Box>
 
       <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          完整AI建议
-        </DialogTitle>
+        <DialogTitle>AI建议</DialogTitle>
         <DialogContent>
           <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-            {suggestion}
+            {fullSuggestion}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>
-            取消
-          </Button>
-          <Button onClick={handleSendAndClose} color="primary" variant="contained">
-            发送此回复
+          <Button onClick={() => setIsDialogOpen(false)}>取消</Button>
+          <Button 
+            onClick={() => {
+              onSend(fullSuggestion);
+              setIsDialogOpen(false);
+            }} 
+            variant="contained"
+          >
+            使用此建议
           </Button>
         </DialogActions>
       </Dialog>
