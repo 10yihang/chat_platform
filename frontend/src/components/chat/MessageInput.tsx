@@ -126,7 +126,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             <span>豆包</span>
                         </Stack>
                     </MenuItem>
-                    <MenuItem value="gemini">
+                    <MenuItem value="gemini" disabled>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <SmartToyIcon fontSize="small" />
                             <span>Gemini</span>
@@ -142,6 +142,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <Stack direction="row" spacing={1} alignItems="center">
                             <SmartToyIcon fontSize="small" />
                             <span>Grok2</span>
+                        </Stack>
+                    </MenuItem>
+                    <MenuItem value="Baidu" disabled>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <SmartToyIcon fontSize="small" />
+                            <span>千帆</span>
                         </Stack>
                     </MenuItem>
                 </Select>
