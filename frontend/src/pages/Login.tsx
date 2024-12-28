@@ -42,7 +42,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('username', data.username);
+        localStorage.setItem('userName', data.username);
         localStorage.setItem('email', data.email);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('IsGuest', 'false');
@@ -79,7 +79,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('username', username);
+        localStorage.setItem('userName', username);
         // localStorage.setItem('email', data.email);
         localStorage.setItem('userId', '0');
         localStorage.setItem('IsGuest', 'true');
