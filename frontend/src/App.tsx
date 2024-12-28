@@ -40,16 +40,26 @@ const App: React.FC = () => {
     localStorage.removeItem('token');
   };
 
+  function isTokenExpired(token: string) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp && Date.now() >= payload.exp * 1000;
+    } catch {
+      return true; 
+    }
+  }
+
   // 检查用户认证状态
   React.useEffect(() => {
 
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (token) {
-          // TODO: 验证 token
+        if (token && !isTokenExpired(token)) {
           setIsAuthenticated(true);
+          return;
         }
+        localStorage.removeItem('token');
       } catch (error) {
         console.error('Auth check failed:', error);
       } finally {
