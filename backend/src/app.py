@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from config import Config
-from extensions import db, socketio, redis_client, logger
+from extensions import db, socketio, redis_client, logger, mail
 from routes.auth import auth_bp
 from routes.chat import chat_bp
 from routes.user import user_bp
@@ -36,6 +36,7 @@ def create_app(app):
     app.config.from_object(Config)
     db.init_app(app)
     redis_client.init_app(app)
+    mail.init_app(app)  # 初始化 Flask-Mail
     JWTManager(app)
     
     socketio.init_app(app, 
