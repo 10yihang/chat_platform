@@ -12,7 +12,7 @@ class Config:
         'host': '10.255.253.63',
         'port': 3306,
         'user': 'root',
-        'password': 'hyh208116',
+        'password': os.environ.get('MYSQL_PASSWORD'),
         'database': 'chat_platform',
         'charset': 'utf8mb4'
     }
@@ -20,8 +20,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    SSL_CERT = 'cert.pem'
-    SSL_KEY = 'key.pem'
     PREFERRED_URL_SCHEME = 'https'
     BASE_URL = 'https://chat.yihang01.cn'
     PORT = 5000
@@ -30,5 +28,5 @@ class Config:
     MAIL_USE_TLS = True
     MAIL_USE_SSL = False  # 添加这行
     MAIL_USERNAME = 'yihang_01_doge@qq.com'
-    MAIL_PASSWORD = 'esuionyjcvfqdhgf' 
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') 
     MAIL_DEFAULT_SENDER = 'yihang_01_doge@qq.com' 
