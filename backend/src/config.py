@@ -12,7 +12,7 @@ class Config:
         'host': 'your_mysql_ip',
         'port': 3306,
         'user': 'root',
-        'password': 'your_password',
+        'password': os.environ.get('MYSQL_PASSWORD'),
         'database': 'chat_platform',
         'charset': 'utf8mb4'
     }
@@ -20,8 +20,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    SSL_CERT = 'cert.pem'
-    SSL_KEY = 'key.pem'
     PREFERRED_URL_SCHEME = 'https'
     BASE_URL = 'https://chat.yihang01.cn'
     PORT = 5000
