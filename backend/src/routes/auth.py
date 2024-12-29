@@ -1,16 +1,64 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from models.user import User  
 from services.chat import ChatService  
 from models.login_log import LoginLog
 from models.group_member import GroupMember
 from sqlalchemy import or_
-from extensions import db
+from extensions import db, redis_client
 from flask_sqlalchemy import SQLAlchemy
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from captcha.image import ImageCaptcha
+import random, string, base64, io
+from flask_mail import Mail, Message
+
+limiter = Limiter(key_func=get_remote_address)
+image = ImageCaptcha()
+mail = Mail()
 
 auth_bp = Blueprint('auth', __name__)
 
+def generate_code(length=4):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+@auth_bp.route('/captcha', methods=['GET'])
+def get_captcha():
+    code = generate_code()
+    session['captcha'] = code
+    data = image.generate(code)
+    byte_data = io.BytesIO()
+    data.save(byte_data, 'PNG')
+    # 转为base64
+    base64_data = base64.b64encode(byte_data.getvalue()).decode()
+    return jsonify({'captcha': f'data:image/png;base64,{base64_data}'})
+
+@auth_bp.route('/send-email-code', methods=['POST'])
+@limiter.limit("1 per minute")
+def send_email_code():
+    data = request.get_json()
+    email = data.get('email')
+    if not email:
+        return jsonify({'message': '邮箱不能为空'}), 400
+    
+    code = generate_code(6)
+    redis_client.setex(f'email_code:{email}', 300, code)
+    
+    try:
+        msg = Message(
+            '注册验证码',
+            sender='yihang_01_doge@qq.com',
+            recipients=[email]
+        )
+        msg.body = f'您的验证码是：{code}，5分钟内有效'
+        mail.send(msg)
+        return jsonify({'message': '验证码已发送'}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'message': '验证码发送失败'}), 500
+
 @auth_bp.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     if not request.is_json:
         return jsonify({'message': '请求必须是JSON格式'}), 415
@@ -19,6 +67,11 @@ def register():
     username = data.get('username')
     password = data.get('password')
     email = data.get('email')
+    code = data.get('code')
+
+    stored_code = redis_client.get(f'email_code:{email}')
+    if not stored_code or stored_code.decode() != code:
+        return jsonify({'message': '邮箱验证码错误或已过期'}), 401
 
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
@@ -67,10 +120,15 @@ def register():
         return jsonify({'message': '注册失败，请稍后重试'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    captcha = data.get('captcha')
+
+    if session.get('captcha') != captcha.upper():
+        return jsonify({'message': '验证码错误'}), 401
 
     token = ChatService.generate_token(0)
 
@@ -149,3 +207,4 @@ def login():
         print(e)
         db.session.rollback()
         return jsonify({'message': '服务器错误'}), 500
+
