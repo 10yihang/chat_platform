@@ -26,7 +26,7 @@ class Config:
     MAIL_SERVER = 'smtp.qq.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USE_SSL = False  # 添加这行
+    MAIL_USE_SSL = False
     MAIL_USERNAME = 'yihang_01_doge@qq.com'
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') 
     MAIL_DEFAULT_SENDER = 'yihang_01_doge@qq.com' 
