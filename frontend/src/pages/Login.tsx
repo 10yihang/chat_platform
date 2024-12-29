@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Card, TextField, Button, Typography, Stack, Divider, Alert, CircularProgress } from '@mui/material';
 
 interface LoginProps {
@@ -24,13 +24,61 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   //获取图形验证码
   const refreshCaptcha = async () => {
     try {
-      const response = await fetch(preUrl + '/api/auth/captcha');
+      const response = await fetch(preUrl + '/api/auth/captcha', {
+        credentials: 'include'  
+      });
       const data = await response.json();
-      setCaptchaUrl(data.captcha);
+      
+      if (response.ok) {
+        setCaptchaUrl(data.captcha);
+      } else {
+        // 处理 429 状态码
+        if (response.status === 429) {
+          setError(data.message);  // 显示需要等待的时间
+        } else {
+          setError('获取验证码失败');
+        }
+      }
     } catch (err) {
       setError('获取验证码失败');
     }
   };
+
+  useEffect(() => {
+    refreshCaptcha();
+  }, []);
+
+  // 检查邮箱验证码发送状态
+  const checkEmailCodeStatus = async () => {
+    if (!email) return;
+    
+    try {
+      const response = await fetch(`${preUrl}/api/auth/email-code-status?email=${email}`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.remaining > 0) {
+        setCountdown(data.remaining);
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (err) {
+      console.error('检查验证码状态失败:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (email) {
+      checkEmailCodeStatus();
+    }
+  }, [email]);
 
   //获取邮箱验证码
   const sendEmailCode = async () => {
@@ -38,16 +86,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setError('请输入邮箱');
       return;
     }
-    
+
     try {
       const response = await fetch(preUrl + '/api/auth/send-email-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+
+      const data = await response.json();
       
       if (response.ok) {
-        setCountdown(60);
+        setCountdown(data.remaining || 60);
         const timer = setInterval(() => {
           setCountdown(prev => {
             if (prev <= 1) {
@@ -58,7 +108,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           });
         }, 1000);
       } else {
-        const data = await response.json();
+        if (response.status === 429) {
+          setCountdown(data.remaining);
+        }
         setError(data.message);
       }
     } catch (err) {
@@ -84,13 +136,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const response = await fetch(preUrl + '/api/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email,
           password,
-          captcha: captchaInput,
+          captcha: captchaInput
         }),
       });
 
@@ -111,12 +164,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setLoginLoading(false);
     }
 
-    console.log('登录信息:', { email, password });
+    console.log('登录信息:', { email, password, captchaInput });
   };
 
   const handleGuestLogin = async () => {
     if (username) {
-      if( !captchaInput) {
+      if (!captchaInput) {
         setError('请输入验证码');
         return;
       };
@@ -126,13 +179,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       try {
         const response = await fetch(preUrl + '/api/auth/login', {
           method: 'POST',
+          credentials: 'include',  // 添加这一行
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             email: '',
             password: '',
-            captcha: captchaInput,
+            captcha: captchaInput
           }),
         });
 
@@ -163,6 +217,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
+    if (!emailCode) {
+      setError('请输入邮箱验证码');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('密码和确认密码不一致');
       return;
@@ -184,6 +243,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           username,
           password,
           email,
+          code: emailCode
         }),
       });
 
@@ -204,7 +264,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setRegisterLoading(false);
     }
 
-    console.log('注册信息:', { username, password, email });
+    console.log('注册信息:', { username, password, email, emailCode });
   };
 
   return (
@@ -217,14 +277,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {!isGuest ? (
             !isRegistering ? (
               <>
-                <TextField label="邮箱" fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
-                <TextField label="密码" type="password" fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
+                <TextField label="邮箱" fullWidth onChange={(e) => setEmail(e.target.value)} />
+                <TextField label="密码" type="password" fullWidth onChange={(e) => setPassword(e.target.value)} />
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <TextField 
-                    label="验证码" 
-                    fullWidth 
+                  <TextField
+                    label="验证码"
+                    fullWidth
                     value={captchaInput}
-                    onChange={(e) => setCaptchaInput(e.target.value)} 
+                    onChange={(e) => setCaptchaInput(e.target.value)}
                   />
                   {captchaUrl && (
                     <img
@@ -238,18 +298,27 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <Button variant="contained" fullWidth onClick={() => handleLogin()}>
                   {loginLoading ? <CircularProgress size={24} /> : '登录'}
                 </Button>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Button variant="outlined" fullWidth onClick={() => setIsRegistering(true)}>
+                    {registerLoading ? <CircularProgress size={24} /> : '注册'}
+                  </Button>
+                  <Divider style={{ margin: "0 10px" }}>或</Divider>
+                  <Button variant="outlined" fullWidth onClick={() => setIsGuest(true)}>
+                    访客模式
+                  </Button>
+                </div>
               </>
             ) : (
               <>
-                <TextField label="邮箱" type="email" fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
+                <TextField label="邮箱" type="email" fullWidth onChange={(e) => setEmail(e.target.value)} />
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <TextField 
-                    label="验证码" 
-                    fullWidth 
+                  <TextField
+                    label="验证码"
+                    fullWidth
                     value={emailCode}
-                    onChange={(e) => setEmailCode(e.target.value)} 
+                    onChange={(e) => setEmailCode(e.target.value)}
                   />
-                  <Button 
+                  <Button
                     variant="contained"
                     disabled={countdown > 0}
                     onClick={sendEmailCode}
@@ -257,9 +326,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     {countdown > 0 ? `${countdown}s` : '发送验证码'}
                   </Button>
                 </div>
-                <TextField label="密码" type="password" fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
-                <TextField label="确认密码" type="password" fullWidth value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                <TextField label="用户名" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} />
+                <TextField label="密码" type="password" fullWidth onChange={(e) => setPassword(e.target.value)} />
+                <TextField label="确认密码" type="password" fullWidth onChange={(e) => setConfirmPassword(e.target.value)} />
+                <TextField label="用户名" fullWidth onChange={(e) => setUsername(e.target.value)} />
                 <Button variant="contained" fullWidth onClick={handleRegister}>
                   {registerLoading ? <CircularProgress size={24} /> : '注册'}
                 </Button>
@@ -276,12 +345,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <TextField 
-                    label="验证码" 
-                    fullWidth 
+               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <TextField
+                    label="验证码"
+                    fullWidth
                     value={captchaInput}
-                    onChange={(e) => setCaptchaInput(e.target.value)} 
+                    onChange={(e) => setCaptchaInput(e.target.value)}
                   />
                   {captchaUrl && (
                     <img

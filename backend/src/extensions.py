@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from flask_redis import FlaskRedis
+from flask_mail import Mail
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -27,3 +28,4 @@ logger.addHandler(console_handler)
 db = SQLAlchemy()
 socketio = SocketIO()
 redis_client = FlaskRedis()
+mail = Mail()  # 创建 mail 实例

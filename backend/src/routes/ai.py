@@ -15,13 +15,11 @@ class AIModel(Enum):
     GEMINI = 2
     DEEPSEEK = 3
     GROK = 4
-    GROK = 4
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 DEEP_API_KEY = os.getenv('DEEP_API_KEY')
-GROK_API_KEY = os.getenv('GROK_API_KEY')
 GROK_API_KEY = os.getenv('GROK_API_KEY')
 
 ai_bp = Blueprint('ai', __name__)
@@ -39,12 +37,6 @@ Grok_Client = OpenAI(
     api_key = GROK_API_KEY,
     base_url = "https://api.x.ai/v1"
 )
-
-Grok_Client = OpenAI(
-    api_key = GROK_API_KEY,
-    base_url = "https://api.x.ai/v1"
-)
-
 
 AI_PROMPT = '''
 你的任务根据聊天记录模仿要回复的人的语气进行一个模拟的回复。
