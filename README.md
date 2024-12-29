@@ -110,12 +110,7 @@ exit;
 mysql -u your_username -p chat_platform < backend/sql/create.sql
 
 # 配置数据库连接
-# 在 .env 文件中设置：
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_NAME=chat_platform
+# 在 .env和config.py文件中设置数据库与SMTP服务器
 ```
 
 6. 运行服务器
@@ -138,6 +133,7 @@ npm install
 ```bash
 cp .env.example .env.local
 # 编辑 .env.local 配置API地址
+# 或在APP.tsx中更改global变亮
 ```
 
 4. 运行开发服务器
