@@ -36,7 +36,7 @@ def create_app(app):
     app.config.from_object(Config)
     db.init_app(app)
     redis_client.init_app(app)
-    mail.init_app(app)  # 初始化 Flask-Mail
+    mail.init_app(app) 
     JWTManager(app)
     
     socketio.init_app(app, 
@@ -46,7 +46,7 @@ def create_app(app):
         ping_interval=25,
         logger=True,
         engineio_logger=True,
-        transports=['websocket'])
+        transports=['websocket', 'polling'])
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
