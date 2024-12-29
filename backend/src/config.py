@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 class Config:
-    REDIS_URL = "redis://localhost:6379/0"
+    REDIS_URL = "redis://localhost:6379/0" # default redis port
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
@@ -12,7 +12,7 @@ class Config:
         'host': 'your_mysql_ip',
         'port': 3306,
         'user': 'root',
-        'password': 'your_password',
+        'password': 'yout_password',
         'database': 'chat_platform',
         'charset': 'utf8mb4'
     }
@@ -28,7 +28,7 @@ class Config:
     MAIL_SERVER = 'smtp.qq.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USE_SSL = False  # 添加这行
-    MAIL_USERNAME = 'your_smtp_email'
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') 
-    MAIL_DEFAULT_SENDER = 'your_smtp_email' 
+    MAIL_USE_SSL = False 
+    MAIL_USERNAME = 'your_smtp_eamil'
+    MAIL_PASSWORD = 'your_password' 
+    MAIL_DEFAULT_SENDER = 'your_smtp_eamil' 
