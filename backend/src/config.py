@@ -25,3 +25,8 @@ class Config:
     PREFERRED_URL_SCHEME = 'https'
     BASE_URL = 'https://chat.yihang01.cn'
     PORT = 5000
+    MAIL_SERVER = 'smtp.qq.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = 'your_smtp_email'
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
